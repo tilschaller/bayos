@@ -1,8 +1,8 @@
-LD ?= ld
-AS ?= nasm
-CC ?= gcc
+LD = ld
+AS = nasm
+CC = gcc
 
-CFLAGS += \
+CFLAGS = \
 	-m64 \
 	-fno-pie \
 	-nostdlib \
@@ -17,8 +17,8 @@ ASM_SRCS =
 C_SRCS = \
 	main.c
 
-ASM_OBJS = $(pathsubst %.asm,%.o,$(ASM_SRCS))
-C_OBJS = $(pathsubst %.c,%.o,%(C_SRCS))
+ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
+C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
 OBJS = $(ASM_OBJS) $(C_OBJS)
 
 kernel: $(OBJS) kernel.ld Makefile
@@ -32,4 +32,8 @@ kernel: $(OBJS) kernel.ld Makefile
 
 .PHONY: clean
 clean:
-	rm -f kernel %(OBJS)
+	rm -f kernel $(OBJS)
+
+.PHONY: install
+install: kernel
+	mv kernel ../img
