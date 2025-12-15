@@ -40,6 +40,8 @@ __after_jmp:
 	xor edx, edx
 	div ebx
 	; number of segments is now stored in eax
+  ; add one for kernel elf header
+  inc eax
 	mov [__num_segments], ax
 	; load the segments into memory
 	mov si, _dap_second_stage
