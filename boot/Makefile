@@ -3,7 +3,7 @@ AS = nasm
 CC = gcc
 
 CFLAGS = \
-	-m32 \
+	-m16 \
 	-ffreestanding \
 	-fno-pie \
 	-nostdlib \
@@ -20,7 +20,7 @@ ASM_SRCS = \
 	bootloader_16.asm
 
 C_SRCS = \
-	bootloader_32.c
+	parse_elf.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))

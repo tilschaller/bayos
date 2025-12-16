@@ -11,7 +11,7 @@ MEMORY {
 SECTIONS {
 	.bootloader : {
 		*(.bootloader16)
-    *(.bootloader32)
+    	*(.bootloader32)
 	} > bootloader
 	.boot_sector : {
 		*(.boot_sector)

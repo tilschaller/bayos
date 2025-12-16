@@ -1,6 +1,8 @@
 BITS 16
 
 GLOBAL _bootloader
+EXTERN _size_of_bootloader
+EXTERN parse_elf
 
 SECTION .bootloader16
 
@@ -168,13 +170,12 @@ __enable_video_mode:
   cmp ax, 0x4f
   jne _halt_and_catch_fire
 
-  ; enter protected mode
-  lgdt [_gdtr]
-  mov eax, cr0
-  or al, 1
-  mov cr0, eax
-
-  jmp 0x08:_protected_mode
+  mov eax, _memory_map_entries
+  mov ebx, _vbe_mode_info
+  mov ecx, _size_of_bootloader
+  push ecx
+  push ebx
+  push eax
 
   hlt
 
@@ -220,24 +221,3 @@ _gdt:
   dq 0x00CF9A000000FFFF
   dq 0x00CF92000000FFFF
 _gdt_end:
-
-EXTERN protected_mode
-
-BITS 32
-_protected_mode:
-  mov eax, 0x10
-  mov ds, eax
-  mov es, eax
-  mov fs, eax
-  mov gs, eax
-  mov ss, eax
-  mov esp, eax
-
-  mov eax, _vbe_mode_info
-  mov ebx, _memory_map_entries
-  push eax
-  push ebx
-
-  call protected_mode
-
-  hlt

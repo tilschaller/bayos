@@ -1,45 +1,42 @@
+/*
+this is not actually 32bit mode
+but 16 bit code, but is named bootloader32
+so it is linked after bootloader_16 is the boot binary
+*/
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
+typedef unsigned long int uint32_t;
+typedef unsigned long long int uint64_t;
 typedef uint32_t size_t;
 
-struct video_mode {
-	uint16_t attributes;
-	uint8_t window_a;
-	uint8_t window_b;
-	uint16_t granularity;
-	uint16_t window_size;
-	uint16_t segment_a;
-	uint16_t segment_b;
-	uint32_t win_func_ptr;
-	uint16_t pitch;
-	uint16_t width;
-	uint16_t height;
-	uint8_t w_char;
-	uint8_t y_char;
-	uint8_t planes;
-	uint8_t bpp;
-	uint8_t banks;
-	uint8_t memory_model;
-	uint8_t bank_size;
-	uint8_t image_pages;
-	uint8_t reserved0;
+typedef struct {
+	uint8_t ident[16];
+	uint16_t type;
+	uint16_t machine;
+	uint32_t version;
+	uint64_t entry;
+	uint64_t phoff;
+	uint64_t shoff;
+	uint32_t flags;
+	uint16_t ehsize;
+	uint16_t phentsize;
+	uint16_t phnum;
+	uint16_t shentsize;
+	uint16_t shnum;
+	uint16_t shstrndx;
+} __attribute__((packed)) elf_header;
 
-	uint8_t red_mask;
-	uint8_t red_position;
-	uint8_t green_mask;
-	uint8_t green_position;
-	uint8_t blue_mask;
-	uint8_t blue_position;
-	uint8_t reserved_mask;
-	uint8_t reserved_position;
-	uint8_t direct_color_attributes;
-
-	uint32_t framebuffer;
-	uint32_t off_screen_mem_off;
-	uint16_t off_screen_mem_size;
-	uint8_t reserved1[206];
-} __attribute__ ((packed));
+typedef struct {
+	uint32_t type;
+	uint32_t flags;
+	uint64_t offset;
+	uint64_t vaddr;
+	uint64_t paddr;
+	uint64_t filesz;
+	uint64_t memsz;
+	uint64_t align;
+} __attribute__((packed)) elf_program_header;
 
 __attribute__((section(".bootloader32")))
 void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
@@ -104,14 +101,35 @@ static void hcf(void) {
 }
 
 __attribute__((section(".bootloader32"), noreturn))
-void protected_mode(uint32_t memory_map, struct video_mode *video_mode) {
+void parse_elf(uint32_t memory_map, uint32_t video_mode, uint32_t size_of_bootloader) {
 	(void)memory_map;
 	(void)video_mode;
+	(void)size_of_bootloader;
 
-	for (size_t i = 0; i < 100; i++) {
-		volatile uint32_t *fb_ptr = (uint32_t*)0xfd000000;
-		fb_ptr[i * (video_mode->pitch / 4) + i] = 0xffffff; 
-	}
+	/*
+	crash if sizes dont match, it makes no sense to continue
+	*/
+  	if (sizeof(uint16_t) != 2 && sizeof(uint32_t) != 4 && sizeof(uint64_t) != 8) {
+  		asm volatile("int $0xff");
+  	}
 
-	hcf();
+  	/*
+  	TODO: 
+  		read the program headers of kernel into memory
+  			preferably at address 1MiB (0x100000)
+  			using https://www.ctyme.com/intr/rb-1527.htm
+  		enable nmis
+  		set up paging for kernel
+  		enter long mode
+  		jump to kernel and pass memory map and video mode
+  	*/ 
+
+  	hcf();
+}
+
+uint32_t read_disk(uint32_t lba, uint32_t addr) {
+	(void)lba;
+	(void)addr;
+
+	return 0;
 }
