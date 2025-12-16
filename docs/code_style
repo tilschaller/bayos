@@ -1,0 +1,16 @@
+####################
+#BayOS Coding-Style#
+####################
+
+We consider an uniform coding- and naming-style as necessary, so we'll write it
+down!
+
+0. Preamble and general conventions
+        - line-length shall be a maximum of 80 characters
+
+1. Naming convention
+
+2. Indentation
+        - one indentation MUST be 8 spaces
+        - DO NOT use the GNU double-indentation! It's just useless!
+        
