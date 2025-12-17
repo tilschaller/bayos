@@ -2,7 +2,7 @@ BITS 16
 
 GLOBAL _bootloader
 EXTERN _size_of_bootloader
-EXTERN parse_elf
+EXTERN bootloader_32
 
 SECTION .bootloader16
 
@@ -173,9 +173,9 @@ __enable_video_mode:
   mov eax, _memory_map_entries
   mov ebx, _vbe_mode_info
   mov ecx, _size_of_bootloader
-  push ecx
-  push ebx
-  push eax
+  movzx edx, byte [_boot_disk]
+
+  jmp bootloader_32
 
   hlt
 

@@ -93,19 +93,59 @@ int memcmp(const void *s1, const void *s2, size_t n) {
     return 0;
 }
 
-__attribute__((section(".bootloader32"), noreturn))
+__attribute__((section(".bootloader32"), noreturn, naked))
 static void hcf(void) {
     for (;;) {
         asm ("hlt");
     }
 }
 
-__attribute__((section(".bootloader32"), noreturn))
-void parse_elf(uint32_t memory_map, uint32_t video_mode, uint32_t size_of_bootloader) {
-	(void)memory_map;
-	(void)video_mode;
-	(void)size_of_bootloader;
+typedef struct {
+	uint8_t size;
+	uint8_t zero;
+	uint16_t num_of_sectors;
+	uint16_t dest_offset;
+	uint16_t dest_segment;
+	uint32_t lower_lba;
+	uint32_t higher_lba;
+} __attribute__((packed)) dap;
 
+
+__attribute__((section(".bootloader32var"), aligned(16)))
+dap rfd_dap = {0};
+
+__attribute__((section(".bootloader32")))
+void read_from_disk(uint16_t disk, uint16_t num_of_sectors, uint16_t dest_offset, uint16_t dest_segment, uint64_t lba) {
+	rfd_dap.size = 16;
+	rfd_dap.num_of_sectors = num_of_sectors;
+	rfd_dap.dest_offset = dest_offset;
+	rfd_dap.dest_segment = dest_segment;
+	rfd_dap.lower_lba = lba & 0xffffffff;
+	rfd_dap.higher_lba = (lba >> 32) & 0xffffffff;
+
+	asm volatile("mov %0, %%si" : : "r"((uint16_t)&rfd_dap) : "si");
+	asm volatile("mov %0, %%dl" : : "r"((uint8_t)disk) : "dl");
+	asm volatile("mov $0x42, %%ah" : : : "ah");
+	asm volatile("int $0x13");
+	asm volatile("jc hcf");
+}
+
+__attribute__((section(".bootloader32"), noreturn, naked))
+void bootloader_32(void) {
+	/*
+	eax contains memory_map_entries
+	ebx contains video_mode_info
+	ecx contains size_of_bootloader
+	edx contains boot_disk
+	*/
+	uint32_t memory_map;
+	uint32_t video_mode_info;
+	uint32_t size_of_bootloader;
+	uint32_t boot_disk;
+	asm volatile("mov %%eax, %0" : "=r"(memory_map) : : );
+	asm volatile("mov %%ebx, %0" : "=r"(video_mode_info) : : );
+	asm volatile("mov %%ecx, %0" : "=r"(size_of_bootloader) : : );
+	asm volatile("mov %%edx, %0" : "=r"(boot_disk) : : );
 	/*
 	crash if sizes dont match, it makes no sense to continue
 	*/
@@ -113,23 +153,10 @@ void parse_elf(uint32_t memory_map, uint32_t video_mode, uint32_t size_of_bootlo
   		asm volatile("int $0xff");
   	}
 
-  	/*
-  	TODO: 
-  		read the program headers of kernel into memory
-  			preferably at address 1MiB (0x100000)
-  			using https://www.ctyme.com/intr/rb-1527.htm
-  		enable nmis
-  		set up paging for kernel
-  		enter long mode
-  		jump to kernel and pass memory map and video mode
-  	*/ 
+  	uint32_t elf_on_disk = 512 + ((size_of_bootloader + 511) & (~511));
+  	elf_header *elf_in_ram = (elf_header*)(elf_on_disk + 0x7c00);
+
+  	read_from_disk(boot_disk, 1, (uint16_t)elf_in_ram, 0, elf_on_disk / 512);
 
   	hcf();
-}
-
-uint32_t read_disk(uint32_t lba, uint32_t addr) {
-	(void)lba;
-	(void)addr;
-
-	return 0;
 }

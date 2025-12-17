@@ -5,13 +5,14 @@ ENTRY(_start)
 MEMORY {
 	boot_sector (rwx) : ORIGIN = 0x7c00, LENGTH = 510
 	magic_bytes (rwx) : ORIGIN = 0x7dfe, LENGTH = 2
-	bootloader (rwx) : ORIGIN = 0x7e00, LENGTH = 1M
+	bootloader (rwx) : ORIGIN = 0x7e00, LENGTH = 0x81ff
 }
 
 SECTIONS {
 	.bootloader : {
 		*(.bootloader16)
     	*(.bootloader32)
+    	*(.bootloader32var)
 	} > bootloader
 	.boot_sector : {
 		*(.boot_sector)
