@@ -130,10 +130,10 @@ __vesa_mode_info_loop:
   jne __vesa_mode_info_loop
 
   ; score is formed by width * height * bpp
-  movzx eax, word [_vbe_mode_info + 0x12]
-  movzx ebx, word [_vbe_mode_info + 0x14]
+  movzx eax, word [_vbe_mode_info + 18]
+  movzx ebx, word [_vbe_mode_info + 20]
   mul ebx
-  movzx ebx, byte [_vbe_mode_info + 0x19]
+  movzx ebx, byte [_vbe_mode_info + 24]
   mul ebx
 
   ; is lower ?
