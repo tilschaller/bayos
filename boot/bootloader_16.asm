@@ -132,9 +132,9 @@ __vesa_mode_info_loop:
   ; score is formed by width * height * bpp
   movzx eax, word [_vbe_mode_info + 0x12]
   movzx ebx, word [_vbe_mode_info + 0x14]
-  mul eax, ebx
+  mul ebx
   movzx ebx, byte [_vbe_mode_info + 0x19]
-  mul eax, ebx
+  mul ebx
 
   ; is lower ?
   pop cx
@@ -147,7 +147,7 @@ __vesa_mode_info_loop:
 
 __enable_video_mode:
   ; no suitable video mode was found
-  cmp [_save_video_mode], 0
+  cmp word [_save_video_mode], 0
   je _halt_and_catch_fire
 
   ; confirm a mode was found
