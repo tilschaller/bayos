@@ -161,5 +161,27 @@ void bootloader_32(void) {
   	read_from_disk(boot_disk, 1, 0x7c00, 0, lba_of_elf);
   	elf_header *elf = 0x7c00;
 
+  	/*
+	calculate the size of the program headers
+	and the lba we need to load + offset from lba
+  	*/
+  	uint32_t size_of_program_headers = elf->phnum * elf->phentsize;
+  	uint64_t lba_of_program_headers = lba_of_elf + (elf->phoff / 512);
+  	uint32_t program_header_offset_from_lba = elf->phoff % 512;
+
+  	/*
+	TODO: 
+		load the array of program headers into memory
+		parse them and load the code of the ones with type == 1 into memory
+			e.g. use offset in elf file ph->offset and ph->filesz to load them into memory
+				the address at which is loaded doesnt matter
+		enter protected mode
+		copy the programs loaded from the program header to ph->vaddr - 0xFFFFFFFF80000000 + 0x100000
+		set up a paging table -> map the address space from 1MB (0x100000) - 2GB1MB to 0xFFFFFFFF80000000 - 0xFFFFFFFFFFFFFFFF
+		(maybe map physical memory) -> can also be done in kernel, so it doesnt really matter
+		enter long mode
+		jump to kernel -> elf->entry
+  	*/
+
   	hcf();
 }

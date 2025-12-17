@@ -91,6 +91,9 @@ __e820_end:
 
   ; we now have a memory map
   ; next get a framebuffer
+  ; maybe do this in c after loading the kernel 
+  ; but before switching to protected mode
+  ; since it doesnt really work rigth now
   mov di, _vbe_info
   mov ax, 0x4f00
   int 0x10
