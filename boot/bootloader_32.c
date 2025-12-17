@@ -145,7 +145,7 @@ void bootloader_32(void) {
 	asm volatile("mov %%eax, %0" : "=r"(memory_map) : : );
 	asm volatile("mov %%ebx, %0" : "=r"(video_mode_info) : : );
 	asm volatile("mov %%ecx, %0" : "=r"(size_of_bootloader) : : );
-	asm volatile("mov %%edx, %0" : "=r"(boot_disk) : : );
+	asm volatile("mov %%edx, %0" : "=r"(boot_disk) : : ); 
 	/*
 	crash if sizes dont match, it makes no sense to continue
 	*/
@@ -153,10 +153,13 @@ void bootloader_32(void) {
   		asm volatile("int $0xff");
   	}
 
-  	uint32_t elf_on_disk = 512 + ((size_of_bootloader + 511) & (~511));
-  	elf_header *elf_in_ram = (elf_header*)(elf_on_disk + 0x7c00);
-
-  	read_from_disk(boot_disk, 1, (uint16_t)elf_in_ram, 0, elf_on_disk / 512);
+  	uint64_t lba_of_elf = (512 + ((size_of_bootloader + 511) & (~511))) / 512;  
+  	/*
+  	we read the elf header into ram at 0x7c00
+	we just override the boot sector, since we dont need it anymore
+  	*/
+  	read_from_disk(boot_disk, 1, 0x7c00, 0, lba_of_elf);
+  	elf_header *elf = 0x7c00;
 
   	hcf();
 }
