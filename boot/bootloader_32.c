@@ -159,15 +159,9 @@ void bootloader_32(void) {
 	we just override the boot sector, since we dont need it anymore
   	*/
   	read_from_disk(boot_disk, 1, 0x7c00, 0, lba_of_elf);
-  	elf_header *elf = 0x7c00;
+  	elf_header *elf = (elf_header*)0x7c00;
 
-  	/*
-	calculate the size of the program headers
-	and the lba we need to load + offset from lba
-  	*/
-  	uint32_t size_of_program_headers = elf->phnum * elf->phentsize;
-  	uint64_t lba_of_program_headers = lba_of_elf + (elf->phoff / 512);
-  	uint32_t program_header_offset_from_lba = elf->phoff % 512;
+  	for (;;) {}
 
   	/*
 	TODO: 
