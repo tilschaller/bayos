@@ -152,6 +152,8 @@ __vesa_mode_info_loop:
   mov [_save_video_mode], cx
   mov [_save_video_mode_score], eax 
 
+  jmp __vesa_mode_info_loop
+
 __enable_video_mode:
   ; no suitable video mode was found
   cmp word [_save_video_mode], 0
@@ -234,6 +236,6 @@ _jump_to_kernel:
   xor rsi, rsi
   mov edi, _memory_map_entries
   mov esi, _vbe_mode_info
-  mov rax, abs [abs 0x7c00+24]
+  mov rax, [abs 0x7c00+24]
   jmp rax
   

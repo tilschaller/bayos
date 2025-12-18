@@ -101,11 +101,9 @@ void read_from_disk(uint16_t disk, uint16_t num_of_sectors, uint16_t dest_offset
 __attribute__((section(".bootloader162"), noreturn))
 void bootloader_16_2(void) {
   	/*
-	the lba of elf on boot disk, it is aligned to 512 after the bootloader
-	first sector is boot sector, then bootloader and finally the elf,
-	all aligned to 512
+	NOTE: i dont have any idea why it is this way, it just works for now
   	*/
-  	uint64_t lba_of_elf = (512 + (((uint16_t)(uint32_t)&_size_of_bootloader + 511) & (~511))) / 512;
+  	uint64_t lba_of_elf = (1024 + (((uint16_t)(uint32_t)&_size_of_bootloader + 511) & (~511))) / 512;
   	/*
   	we read the elf header into ram at 0x7c00
 	we just override the boot sector, since we dont need it anymore
