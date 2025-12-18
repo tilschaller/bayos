@@ -227,7 +227,13 @@ _jump_to_kernel:
   mov gs, rax
   mov ss, rax
 
-  mov rsp, kernel_stack
-  mov rax, [0x7c00+24]
+  xor rsp, rsp
+  mov esp, kernel_stack
+  mov rbp, rsp
+  xor rdi, rdi
+  xor rsi, rsi
+  mov edi, _memory_map_entries
+  mov esi, _vbe_mode_info
+  mov rax, abs [abs 0x7c00+24]
   jmp rax
   
