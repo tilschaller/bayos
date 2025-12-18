@@ -2,7 +2,7 @@ BITS 16
 
 GLOBAL _bootloader
 EXTERN _size_of_bootloader
-EXTERN bootloader_32
+EXTERN bootloader_16_2
 
 SECTION .bootloader16
 
@@ -178,7 +178,7 @@ __enable_video_mode:
   mov ecx, _size_of_bootloader
   movzx edx, byte [_boot_disk]
 
-  jmp bootloader_32
+  jmp bootloader_16_2
 
   hlt
 
