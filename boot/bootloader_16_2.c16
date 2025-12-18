@@ -228,9 +228,6 @@ void bootloader_16_2(void) {
 
   	/*
 	TODO: 
-		parse them and load the code of the ones with type == 1 into memory
-			e.g. use offset in elf file ph->offset and ph->filesz to load them into memory
-				the address at which is loaded doesnt matter just has to be remebered
 		enter protected mode
 		copy the programs loaded from the program header to ph->vaddr - 0xFFFFFFFF80000000 + 0x100000
 		set up a paging table -> map the address space from 1MB (0x100000) - 2GB1MB to 0xFFFFFFFF80000000 - 0xFFFFFFFFFFFFFFFF
