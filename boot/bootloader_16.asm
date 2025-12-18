@@ -214,13 +214,3 @@ _save_video_mode:
   dw 0
 _save_video_mode_score:
   dd 0
-
-_gdtr:
-  dw _gdt_end - _gdt - 1
-  dd _gdt
-
-_gdt: 
-  dq 0
-  dq 0x00CF9A000000FFFF
-  dq 0x00CF92000000FFFF
-_gdt_end:
