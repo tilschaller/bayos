@@ -4,6 +4,9 @@ typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 typedef uint32_t size_t;
 
+extern uint16_t _size_of_bootloader;
+extern uint8_t _boot_disk;
+
 typedef struct {
 	uint8_t ident[16];
 	uint16_t type;
@@ -106,7 +109,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 }
 
 __attribute__((section(".bootloader162"), noreturn, naked))
-void hcf(void) {
+static void hcf(void) {
     for (;;) {
         asm ("hlt");
     }
@@ -147,38 +150,17 @@ void read_from_disk(uint16_t disk, uint16_t num_of_sectors, uint16_t dest_offset
 
 __attribute__((section(".bootloader162"), noreturn))
 void bootloader_16_2(void) {
-	/*
-	eax contains memory_map_entries
-	ebx contains video_mode_info
-	ecx contains size_of_bootloader
-	edx contains boot_disk
-	*/
-	uint32_t memory_map;
-	uint32_t video_mode_info;
-	uint32_t size_of_bootloader;
-	uint32_t boot_disk;
-	asm volatile("mov %%eax, %0" : "=m"(memory_map) : : );
-	asm volatile("mov %%ebx, %0" : "=m"(video_mode_info) : : );
-	asm volatile("mov %%ecx, %0" : "=m"(size_of_bootloader) : : );
-	asm volatile("mov %%edx, %0" : "=m"(boot_disk) : : ); 
-	/*
-	crash if sizes dont match, it makes no sense to continue
-	*/
-  	if (sizeof(uint16_t) != 2 && sizeof(uint32_t) != 4 && sizeof(uint64_t) != 8) {
-  		asm volatile("int $0xff");
-  	}
-
   	/*
 	the lba of elf on boot disk, it is aligned to 512 after the bootloader
 	first sector is boot sector, then bootloader and finally the elf,
 	all aligned to 512
   	*/
-  	uint64_t lba_of_elf = (512 + ((size_of_bootloader + 511) & (~511))) / 512;  
+  	uint64_t lba_of_elf = (512 + (((uint16_t)&_size_of_bootloader + 511) & (~511))) / 512;
   	/*
   	we read the elf header into ram at 0x7c00
 	we just override the boot sector, since we dont need it anymore
   	*/
-  	read_from_disk(boot_disk, 1, 0x7c00, 0, lba_of_elf);
+  	read_from_disk(_boot_disk, 1, 0x7c00, 0, lba_of_elf);
   	elf_header *elf = (elf_header*)0x7c00;
   	/*
 	next we need to load the array of program headers into memory
@@ -202,7 +184,7 @@ void bootloader_16_2(void) {
 	since we divided down
 	NOTE: we could also create a global list with say 10 entries in which we load this
   	*/
-  	read_from_disk(boot_disk, num_of_sectors_ph, ph_addr, 0, lba_of_ph);
+  	read_from_disk(_boot_disk, num_of_sectors_ph, ph_addr, 0, lba_of_ph);
   	elf_program_header *ph = (elf_program_header*)((uint32_t)ph_addr + ((uint32_t)elf->phoff & 512));
 
   	uint8_t load = 0;
@@ -215,7 +197,7 @@ void bootloader_16_2(void) {
 			*/
   			uint64_t lba_of_ph_ent = lba_of_elf + ph[i].offset / 512;
   			uint16_t num_of_sectors_ph_ent = ((ph[i].filesz + 511) & (~511)) / 512 + 1;
-  			read_from_disk(boot_disk, num_of_sectors_ph_ent, 0, load_segment, lba_of_ph_ent);
+  			read_from_disk(_boot_disk, num_of_sectors_ph_ent, 0, load_segment, lba_of_ph_ent);
   			/*
   			we cant load more than 10 segments, can be increased quite easily by increasing
   			the size of global load_addr_of_ph array
@@ -234,12 +216,11 @@ void bootloader_16_2(void) {
   			load++;
   			load_segment += num_of_sectors_ph * 16;
   		}
-  	} 
+  	}
 
   	/*
   	enter protected mode
   	*/
-
   	asm volatile("lgdt %0" : : "m"(gdtr_val) : "memory");
   	asm volatile("mov %cr0, %eax");
   	asm volatile("or $1, %al");
