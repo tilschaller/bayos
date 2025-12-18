@@ -4,6 +4,7 @@ GLOBAL _bootloader
 GLOBAL _memory_map_entries
 GLOBAL _vbe_mode_info
 GLOBAL _boot_disk
+GLOBAL _jump_to_kernel
 EXTERN _size_of_bootloader
 EXTERN bootloader_16_2
 
@@ -212,3 +213,21 @@ _save_video_mode:
   dw 0
 _save_video_mode_score:
   dd 0
+
+; i put this here because i didnt want to create another file
+SECTION .bootloader32
+EXTERN kernel_stack
+EXTERN pml4
+BITS 64
+_jump_to_kernel:
+  mov rax, 0x10
+  mov ds, rax
+  mov es, rax
+  mov fs, rax
+  mov gs, rax
+  mov ss, rax
+
+  mov rsp, kernel_stack
+  mov rax, [0x7c00+24]
+  jmp rax
+  

@@ -4,28 +4,171 @@ typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 typedef uint32_t size_t;
 
-__attribute__((section(".bootloader32"), noreturn, naked))
-static void hcf(void) {
-    for (;;) {
-        asm ("hlt");
-    }
+typedef struct {
+	uint8_t ident[16];
+	uint16_t type;
+	uint16_t machine;
+	uint32_t version;
+	uint64_t entry;
+	uint64_t phoff;
+	uint64_t shoff;
+	uint32_t flags;
+	uint16_t ehsize;
+	uint16_t phentsize;
+	uint16_t phnum;
+	uint16_t shentsize;
+	uint16_t shnum;
+	uint16_t shstrndx;
+} __attribute__((packed)) elf_header;
+
+typedef struct {
+	uint32_t type;
+	uint32_t flags;
+	uint64_t offset;
+	uint64_t vaddr;
+	uint64_t paddr;
+	uint64_t filesz;
+	uint64_t memsz;
+	uint64_t align;
+} __attribute__((packed)) elf_program_header;
+
+__attribute__((section(".bootloader32")))
+void* memset(void* bufptr, int value, size_t size) {
+	unsigned char* buf = (unsigned char*) bufptr;
+	for (size_t i = 0; i < size; i++)
+		buf[i] = (unsigned char) value;
+	return bufptr;
 }
 
-extern uint32_t _memory_map_entries;
-extern uint32_t _vbe_mode_info;
+typedef struct {
+	uint16_t size;
+	uint64_t *gdt;
+} __attribute__((packed)) gdtr;
+
+__attribute__((section(".bootloader32var")))
+static uint64_t gdt[3] = {
+	0,
+  	0x00AF9A000000FFFF,
+  	0x00AF92000000FFFF,
+};
+
+__attribute__((section(".bootloader32var")))
+static gdtr gdtr_val = {
+	sizeof(gdt) - 1,
+	gdt,
+};
+
+__attribute__((section(".bootloader32var"), aligned(16)))
+uint8_t kernel_stack[0x1000] = {};
+
+extern void _memory_map_entries;
+extern void _vbe_mode_info;
+extern void _size_of_bootloader;
+extern uint32_t load_addr_of_ph[20];
+extern elf_program_header *ph;
 
 __attribute__((section(".bootloader32"), noreturn))
 void bootloader_32(void) {
-	  	/*
+	/*
 	TODO: 
-		copy the programs loaded from the program header to ph->vaddr - 0xFFFFFFFF80000000 + 0x100000
-		set up a paging table -> map the address space from 1MB (0x100000) - 2GB1MB to 0xFFFFFFFF80000000 - 0xFFFFFFFFFFFFFFFF
-		(maybe map physical memory) -> can also be done in kernel, so it doesnt really matter
-		enter long mode
+		mark the addresses up to 0xffff as bootloader reclaimable in memory map
+		mark the addreese used by kernel as used in memory map
 		prepare stack for kernel
+		enter long mode
 		jump to kernel -> elf->entry
   	*/
 
-	for (;;) {}
-	hcf();
+	/*
+	readjust the segment registers
+	*/
+	asm volatile("mov $0x10, %eax");
+	asm volatile("mov %eax, %ds");
+	asm volatile("mov %eax, %es");
+	asm volatile("mov %eax, %fs");
+	asm volatile("mov %eax, %gs");
+	asm volatile("mov %eax, %ss");
+
+	/*
+	copy the laodable programs
+	*/
+	elf_header *elf = (elf_header*)0x7c00;
+	uint16_t load = 0;
+	for (int i = 0; i < elf->phnum; i++) {
+		if (ph[i].type == 1) {
+			volatile uint8_t *dest = (uint8_t*)(uint32_t)(ph[i].vaddr - 0xffffffff80000000 + 0x200000);
+			volatile uint8_t *src = (uint8_t*)(load_addr_of_ph[load++]);
+			for (uint64_t j = 0; j < ph[i].filesz; j++) {
+				dest[j] = src[j];
+			} 
+		}
+	}
+
+	/*
+	create the page tables
+	we identity map the first gb of addresses so the bootloader works
+	we also map 2gb of physical memory at offset 2mb to the last 2gb of 64 bit
+	address space for the kernel
+	*/
+
+	uint64_t *pml4 = (uint64_t*)0x10000;
+	uint64_t *pdpt_kernel = pml4 + 512;
+	uint64_t *pd_kernel = pdpt_kernel + 512;
+	uint64_t *pdpt_low = pd_kernel + 1024;
+	uint64_t *pd_low = pdpt_low + 512;
+
+	memset((void*)pml4, 0, (uint64_t)(uint32_t)(pd_low + 512) - (uint64_t)(uint32_t)pml4);
+
+	pml4[511] = (uint64_t)(uint32_t)pdpt_kernel | 0x3;
+	pdpt_kernel[510] = (uint64_t)(uint32_t)pd_kernel | 0x3;
+	pdpt_kernel[511] = (uint64_t)(uint32_t)&pd_kernel[512] | 0x3;
+	uint64_t phys_kernel = 0x200000;
+	for (int i = 0; i < 1024; i++) {
+		pd_kernel[i] = phys_kernel | 0x83;
+		phys_kernel += 0x200000;
+	}
+	pml4[0] = (uint64_t)(uint32_t)pdpt_low | 0x3;
+	pdpt_low[0] = (uint64_t)(uint32_t)pd_low | 0x3;
+	uint64_t phys_low = 0;
+	for (int i = 0; i < 512; i++) {
+		pd_low[i] = phys_low | 0x83;
+		phys_low += 0x200000;
+	}
+
+	/*
+	write pml4 into cr3
+	*/
+	asm volatile("mov %0, %%eax" : : "r"(pml4) : "eax");
+	asm volatile("mov %eax, %cr3");
+
+	/*
+	enable pae
+	*/
+	asm volatile("mov %cr4, %eax");
+	asm volatile("or $32, %eax");
+	asm volatile("mov %eax, %cr4");
+
+	/*
+	switch to compatibility mode
+	*/
+	asm volatile("mov $0xc0000080, %ecx");
+	asm volatile("rdmsr");
+	asm volatile("or $256, %eax");
+	asm volatile("wrmsr");
+
+	/*
+	enable paging
+	*/
+	asm volatile("mov %cr0, %eax");
+	asm volatile("or $0x80000000, %eax");
+	asm volatile("mov %eax, %cr0");
+
+	/*
+	enter long mode
+	*/
+	asm volatile("lgdt %0" : : "m"(gdtr_val) : "memory");
+	asm volatile("ljmp $0x8, $_jump_to_kernel");
+
+	for (;;) {
+		asm volatile("hlt");
+	}
 }

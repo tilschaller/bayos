@@ -13,6 +13,8 @@ SECTIONS {
 		*(.bootloader16)
     	*(.bootloader162)
     	*(.bootloader162var)
+    	*(.bootloader32)
+    	*(.bootloader32var)
 	} > bootloader
 	.boot_sector : {
 		*(.boot_sector)

@@ -17,6 +17,7 @@ CFLAGS = \
 
 C_16_FLAGS = $(CFLAGS) -m16
 C_32_FLAGS = $(CFLAGS) -m32
+C_64_FLAGS = $(CFLAGS) -m64
 
 ASM_SRCS = \
 	boot_sector.asm \
@@ -55,4 +56,4 @@ clean:
 
 .PHONY: install
 install: boot
-	mv boot ../img
+	cp boot ../img

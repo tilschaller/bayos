@@ -1,7 +1,6 @@
 __attribute__((noreturn))
-void _start(unsigned int memory_map, unsigned int video_mode) {
-  (void)memory_map;
-  (void)video_mode;
-
-  for (;;) {}
+void _start(void) {
+  for (;;) {
+    asm volatile("hlt");
+  }
 }

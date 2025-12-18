@@ -41,7 +41,8 @@ __after_jmp:
 	div ebx
 	; number of segments is now stored in eax
 	mov [__num_segments], ax
-	; load the segments into memory
+	; load the sectors into memory
+	; TODO: maybe use a higher segment, so we can load higher addresses
 	mov si, _dap_second_stage
 	mov ah, 0x42
 	mov dl, [_boot_disk]
