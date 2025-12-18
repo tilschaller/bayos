@@ -1,6 +1,9 @@
 BITS 16
 
 GLOBAL _bootloader
+GLOBAL _memory_map_entries
+GLOBAL _vbe_mode_info
+GLOBAL _boot_disk
 EXTERN _size_of_bootloader
 EXTERN bootloader_16_2
 
@@ -172,11 +175,6 @@ __enable_video_mode:
   int 0x10
   cmp ax, 0x4f
   jne _halt_and_catch_fire
-
-  mov eax, _memory_map_entries
-  mov ebx, _vbe_mode_info
-  mov ecx, _size_of_bootloader
-  movzx edx, byte [_boot_disk]
 
   jmp bootloader_16_2
 
