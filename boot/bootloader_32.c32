@@ -1,0 +1,22 @@
+extern __attribute__((noreturn)) void hcf(void);
+
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned long int uint32_t;
+typedef unsigned long long int uint64_t;
+typedef uint32_t size_t;
+
+__attribute__((section(".bootloader32"), noreturn))
+void bootloader_32(void) {
+	  	/*
+	TODO: 
+		enter protected mode
+		copy the programs loaded from the program header to ph->vaddr - 0xFFFFFFFF80000000 + 0x100000
+		set up a paging table -> map the address space from 1MB (0x100000) - 2GB1MB to 0xFFFFFFFF80000000 - 0xFFFFFFFFFFFFFFFF
+		(maybe map physical memory) -> can also be done in kernel, so it doesnt really matter
+		enter long mode
+		jump to kernel -> elf->entry
+  	*/
+
+	hcf();
+}
