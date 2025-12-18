@@ -36,4 +36,4 @@ clean:
 
 .PHONY: install
 install: kernel
-	mv kernel ../img
+	cp kernel ../img
