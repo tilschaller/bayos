@@ -1,6 +1,6 @@
 /*
 this is not actually 32bit mode
-but 16 bit code, but is named bootloader32
+but 16 bit code, but is named bootloader162
 so it is linked after bootloader_16 is the boot binary
 */
 
@@ -38,7 +38,7 @@ typedef struct {
 	uint64_t align;
 } __attribute__((packed)) elf_program_header;
 
-__attribute__((section(".bootloader32")))
+__attribute__((section(".bootloader162")))
 void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
     uint8_t *restrict pdest = (uint8_t *restrict)dest;
     const uint8_t *restrict psrc = (const uint8_t *restrict)src;
@@ -50,7 +50,7 @@ void *memcpy(void *restrict dest, const void *restrict src, size_t n) {
     return dest;
 }
 
-__attribute__((section(".bootloader32")))
+__attribute__((section(".bootloader162")))
 void *memset(void *s, int c, size_t n) {
     uint8_t *p = (uint8_t *)s;
 
@@ -61,7 +61,7 @@ void *memset(void *s, int c, size_t n) {
     return s;
 }
 
-__attribute__((section(".bootloader32")))
+__attribute__((section(".bootloader162")))
 void *memmove(void *dest, const void *src, size_t n) {
     uint8_t *pdest = (uint8_t *)dest;
     const uint8_t *psrc = (const uint8_t *)src;
@@ -79,7 +79,7 @@ void *memmove(void *dest, const void *src, size_t n) {
     return dest;
 }
 
-__attribute__((section(".bootloader32")))
+__attribute__((section(".bootloader162")))
 int memcmp(const void *s1, const void *s2, size_t n) {
     const uint8_t *p1 = (const uint8_t *)s1;
     const uint8_t *p2 = (const uint8_t *)s2;
@@ -93,7 +93,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
     return 0;
 }
 
-__attribute__((section(".bootloader32"), noreturn, naked))
+__attribute__((section(".bootloader162"), noreturn, naked))
 static void hcf(void) {
     for (;;) {
         asm ("hlt");
@@ -111,10 +111,13 @@ typedef struct {
 } __attribute__((packed)) dap;
 
 
-__attribute__((section(".bootloader32var"), aligned(16)))
+__attribute__((section(".bootloader162var"), aligned(16)))
 dap rfd_dap = {0};
 
-__attribute__((section(".bootloader32")))
+__attribute__((section(".bootloader162var")))
+uint32_t load_addr_of_ph[10];
+
+__attribute__((section(".bootloader162")))
 void read_from_disk(uint16_t disk, uint16_t num_of_sectors, uint16_t dest_offset, uint16_t dest_segment, uint64_t lba) {
 	rfd_dap.size = 16;
 	rfd_dap.num_of_sectors = num_of_sectors;
@@ -123,15 +126,15 @@ void read_from_disk(uint16_t disk, uint16_t num_of_sectors, uint16_t dest_offset
 	rfd_dap.lower_lba = lba & 0xffffffff;
 	rfd_dap.higher_lba = (lba >> 32) & 0xffffffff;
 
-	asm volatile("mov %0, %%si" : : "r"((uint16_t)&rfd_dap) : "si");
+	asm volatile("mov %0, %%si" : : "r"((uint16_t)(uint32_t)&rfd_dap) : "si");
 	asm volatile("mov %0, %%dl" : : "r"((uint8_t)disk) : "dl");
 	asm volatile("mov $0x42, %%ah" : : : "ah");
 	asm volatile("int $0x13");
 	asm volatile("jc hcf");
 }
 
-__attribute__((section(".bootloader32"), noreturn, naked))
-void bootloader_32(void) {
+__attribute__((section(".bootloader162"), noreturn))
+void bootloader_16_2(void) {
 	/*
 	eax contains memory_map_entries
 	ebx contains video_mode_info
@@ -142,10 +145,10 @@ void bootloader_32(void) {
 	uint32_t video_mode_info;
 	uint32_t size_of_bootloader;
 	uint32_t boot_disk;
-	asm volatile("mov %%eax, %0" : "=r"(memory_map) : : );
-	asm volatile("mov %%ebx, %0" : "=r"(video_mode_info) : : );
-	asm volatile("mov %%ecx, %0" : "=r"(size_of_bootloader) : : );
-	asm volatile("mov %%edx, %0" : "=r"(boot_disk) : : ); 
+	asm volatile("mov %%eax, %0" : "=m"(memory_map) : : );
+	asm volatile("mov %%ebx, %0" : "=m"(video_mode_info) : : );
+	asm volatile("mov %%ecx, %0" : "=m"(size_of_bootloader) : : );
+	asm volatile("mov %%edx, %0" : "=m"(boot_disk) : : ); 
 	/*
 	crash if sizes dont match, it makes no sense to continue
 	*/
@@ -153,6 +156,11 @@ void bootloader_32(void) {
   		asm volatile("int $0xff");
   	}
 
+  	/*
+	the lba of elf on boot disk, it is aligned to 512 after the bootloader
+	first sector is boot sector, then bootloader and finally the elf,
+	all aligned to 512
+  	*/
   	uint64_t lba_of_elf = (512 + ((size_of_bootloader + 511) & (~511))) / 512;  
   	/*
   	we read the elf header into ram at 0x7c00
@@ -160,15 +168,69 @@ void bootloader_32(void) {
   	*/
   	read_from_disk(boot_disk, 1, 0x7c00, 0, lba_of_elf);
   	elf_header *elf = (elf_header*)0x7c00;
+  	/*
+	next we need to load the array of program headers into memory
+	we will place this after the bootloader, but aligned to 512
+  	*/
+  	uint16_t ph_addr = 0x7c00 + (uint16_t)lba_of_elf * 512;
+  	/*
+	lba of ph is the offset on the disk aligned down
+  	*/
+  	uint64_t lba_of_ph = lba_of_elf + elf->phoff / 512;
+  	/*
+	lastly we need the length, 
+	first we align to 512 and then divide by 512
+	we add one if we aligned down
+	i dont know if this is needed, but it shouldnt hurt
+  	*/
+  	uint16_t num_of_sectors_ph = ((elf->phnum * elf->phentsize + 511) & (~511)) / 512 + 1;
+  	/*
+	now we can read the program headers into memory
+	the start is the remainder of the offset divided by 512
+	since we divided down
+	NOTE: we could also create a global list with say 10 entries in which we load this
+  	*/
+  	read_from_disk(boot_disk, num_of_sectors_ph, ph_addr, 0, lba_of_ph);
+  	elf_program_header *ph = (elf_program_header*)((uint32_t)ph_addr + ((uint32_t)elf->phoff & 512));
+
+  	uint8_t load = 0;
+  	uint16_t load_segment = 0x7000;
+  	for (int i = 0; i < elf->phnum; i++) {
+  		if (ph[i].type == 1) {
+  			/*
+			do something similar to loading the program headers above
+			for reading the programs from the disk
+			*/
+  			uint64_t lba_of_ph_ent = lba_of_elf + ph[i].offset / 512;
+  			uint16_t num_of_sectors_ph_ent = ((ph[i].filesz + 511) & (~511)) / 512 + 1;
+  			read_from_disk(boot_disk, num_of_sectors_ph_ent, 0, load_segment, lba_of_ph_ent);
+  			/*
+  			we cant load more than 10 segments, can be increased quite easily by increasing
+  			the size of global load_addr_of_ph array
+			*/
+  			if (load > 10) {
+  				hcf();
+  			}
+  			/*
+			adjust the variables for the next loop
+			and store the address at which we just loaded the new segment
+			so we can copy it later
+			the 20 bit linear address is calculated be shifting the 
+			segment left 4 times and adding the offset
+  			*/
+  			load_addr_of_ph[load] = (load_segment << 4) + (ph[i].offset & 512);
+  			load++;
+  			load_segment += num_of_sectors_ph * 16;
+  		}
+  	} 
 
   	for (;;) {}
 
   	/*
 	TODO: 
-		load the array of program headers into memory
 		parse them and load the code of the ones with type == 1 into memory
 			e.g. use offset in elf file ph->offset and ph->filesz to load them into memory
-				the address at which is loaded doesnt matter
+				the address at which is loaded doesnt matter just has to be remebered
 		enter protected mode
 		copy the programs loaded from the program header to ph->vaddr - 0xFFFFFFFF80000000 + 0x100000
 		set up a paging table -> map the address space from 1MB (0x100000) - 2GB1MB to 0xFFFFFFFF80000000 - 0xFFFFFFFFFFFFFFFF

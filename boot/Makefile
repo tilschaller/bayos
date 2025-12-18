@@ -20,7 +20,7 @@ ASM_SRCS = \
 	bootloader_16.asm
 
 C_SRCS = \
-	bootloader_32.c
+	bootloader_16_2.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
