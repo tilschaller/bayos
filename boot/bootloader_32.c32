@@ -53,7 +53,7 @@ static uint64_t gdt[3] = {
 };
 
 __attribute__((section(".bootloader32var")))
-static gdtr gdtr_val = {
+gdtr gdtr_val = {
 	sizeof(gdt) - 1,
 	gdt,
 };
@@ -110,7 +110,7 @@ void bootloader_32(void) {
 	address space for the kernel
 	*/
 
-	uint64_t *pml4 = (uint64_t*)0x10000;
+	uint64_t *pml4 = (uint64_t*)0x100000;
 	uint64_t *pdpt_kernel = pml4 + 512;
 	uint64_t *pd_kernel = pdpt_kernel + 512;
 	uint64_t *pdpt_low = pd_kernel + 1024;
@@ -118,6 +118,9 @@ void bootloader_32(void) {
 
 	memset((void*)pml4, 0, (uint64_t)(uint32_t)(pd_low + 512) - (uint64_t)(uint32_t)pml4);
 
+	/*
+	map the memory at offset 2mb to the last two gb of address space
+	*/
 	pml4[511] = (uint64_t)(uint32_t)pdpt_kernel | 0x3;
 	pdpt_kernel[510] = (uint64_t)(uint32_t)pd_kernel | 0x3;
 	pdpt_kernel[511] = (uint64_t)(uint32_t)&pd_kernel[512] | 0x3;
@@ -126,6 +129,9 @@ void bootloader_32(void) {
 		pd_kernel[i] = phys_kernel | 0x83;
 		phys_kernel += 0x200000;
 	}
+	/*
+	map the first gigabyte as identity map and to start of higher half
+	*/
 	pml4[0] = (uint64_t)(uint32_t)pdpt_low | 0x3;
 	pdpt_low[0] = (uint64_t)(uint32_t)pd_low | 0x3;
 	uint64_t phys_low = 0;
@@ -133,6 +139,7 @@ void bootloader_32(void) {
 		pd_low[i] = phys_low | 0x83;
 		phys_low += 0x200000;
 	}
+	pml4[256] = (uint64_t)(uint32_t)pdpt_low | 0x3;
 
 	/*
 	write pml4 into cr3

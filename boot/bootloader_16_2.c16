@@ -103,7 +103,7 @@ void bootloader_16_2(void) {
   	/*
 	NOTE: i dont have any idea why it is this way, it just works for now
   	*/
-  	uint64_t lba_of_elf = (1024 + (((uint16_t)(uint32_t)&_size_of_bootloader + 511) & (~511))) / 512;
+  	uint64_t lba_of_elf = (512 + (((uint16_t)(uint32_t)&_size_of_bootloader + 511) & (~511))) / 512;
   	/*
   	we read the elf header into ram at 0x7c00
 	we just override the boot sector, since we dont need it anymore

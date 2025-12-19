@@ -217,9 +217,10 @@ _save_video_mode_score:
   dd 0
 
 ; i put this here because i didnt want to create another file
+%define HIGHER_HALF 0xffff800000000000
 SECTION .bootloader32
 EXTERN kernel_stack
-EXTERN pml4
+EXTERN gdtr_val
 BITS 64
 _jump_to_kernel:
   mov rax, 0x10
@@ -228,7 +229,7 @@ _jump_to_kernel:
   mov fs, rax
   mov gs, rax
   mov ss, rax
-
+  
   xor rsp, rsp
   mov esp, kernel_stack
   mov rbp, rsp
