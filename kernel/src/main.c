@@ -15,6 +15,7 @@
                 and then replace types in main.h with new types
 
 */
+#include "../include/types/types.h"
 
 __attribute__((noreturn))
 void hcf() {
@@ -23,7 +24,7 @@ void hcf() {
         }
 }
 
-void *phys_to_virt(unsigned long long phys) {
+void *phys_to_virt(uint64_t phys) {
         /*
                 we have a offset page table from bootloader 
                 -> for every virt address below 100GiB
@@ -31,12 +32,12 @@ void *phys_to_virt(unsigned long long phys) {
                 offset = 0xffff800000000000
         */
         if (phys > 107374182400) return 0;
-        unsigned long long virt = phys + 0xffff800000000000;
+        uint64_t virt = phys + 0xffff800000000000;
         return (void*)virt;
 } 
 
 __attribute__((noreturn))
-void _start(unsigned long long memory_map, unsigned long long video_mode) {
+void _start(uint64_t memory_map, uint64_t video_mode) {
 
         (void)memory_map;
         (void)video_mode;
@@ -47,7 +48,7 @@ void _start(unsigned long long memory_map, unsigned long long video_mode) {
                 -> copy to kernel header -> makes
                 working with this easier
         */
-        volatile unsigned int *framebuffer = phys_to_virt(*(unsigned long long*)(video_mode + 0x28));
+        volatile uint32_t *framebuffer = phys_to_virt(*(uint64_t*)(video_mode + 0x28));
         if (framebuffer == 0) {
                 hcf();
         }
