@@ -113,7 +113,8 @@ void bootloader_32(void) {
 	uint64_t *pml4 = (uint64_t*)0x100000;
 	uint64_t *pdpt_kernel = pml4 + 512;
 	uint64_t *pd_kernel = pdpt_kernel + 512;
-	uint64_t *pdpt_low = pd_kernel + 1024;
+	uint64_t *pdpt_high = pd_kernel + 1024;
+	uint64_t *pdpt_low = pdpt_high + 512;
 	uint64_t *pd_low = pdpt_low + 512;
 
 	memset((void*)pml4, 0, (uint64_t)(uint32_t)(pd_low + 512) - (uint64_t)(uint32_t)pml4);
@@ -133,13 +134,22 @@ void bootloader_32(void) {
 	map the first gigabyte as identity map and to start of higher half
 	*/
 	pml4[0] = (uint64_t)(uint32_t)pdpt_low | 0x3;
-	pdpt_low[0] = (uint64_t)(uint32_t)pd_low | 0x3;
-	uint64_t phys_low = 0;
-	for (int i = 0; i < 512; i++) {
-		pd_low[i] = phys_low | 0x83;
-		phys_low += 0x200000;
+	uint64_t addr = 0;
+	// this maps the first 100 gb of physical memory, 
+	// into higher half and identity maps the first gb
+	// which should be enough for the kernel
+	// to start up at least
+	for (int i = 0; i < 100; i++) {
+		if (i == 0) {
+			pdpt_low[i] = (uint64_t)(uint32_t)&pd_low[i * 512] | 0x3;
+		}
+		pdpt_high[i] = (uint64_t)(uint32_t)&pd_low[i * 512] | 0x3;
+		for (int j = 0; j < 512; j++) {
+			pd_low[i * 512 + j] =  addr | 0x83;
+			addr += 0x200000;
+		}
 	}
-	pml4[256] = (uint64_t)(uint32_t)pdpt_low | 0x3;
+	pml4[256] = (uint64_t)(uint32_t)pdpt_high | 0x3;
 
 	/*
 	write pml4 into cr3
