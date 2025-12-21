@@ -17,14 +17,17 @@ ASM_SRCS =
 
 C_SRCS = \
 	src/main.c \
-	src/string.c
+	src/string.c \
+	src/framebuffer.c \
+	src/fail.c \
+	src/memory.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
 OBJS = $(ASM_OBJS) $(C_OBJS)
 
-kernel: $(OBJS) kernel.ld Makefile
-	$(LD) -o $@ $(OBJS) -T kernel.ld
+kernel: $(OBJS) kernel.ld Makefile assets/font.o
+	$(LD) -o $@ $(OBJS) assets/font.o -T kernel.ld
 
 %.o: %.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
