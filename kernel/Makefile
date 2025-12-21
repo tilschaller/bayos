@@ -8,7 +8,6 @@ CFLAGS = \
 	-fno-pie \
 	-nostdlib \
 	-Wall -Wextra \
-	-fno-builtin \
 	-fno-exceptions \
 	-fno-unwind-tables \
 	-fno-asynchronous-unwind-tables \
@@ -17,7 +16,8 @@ CFLAGS = \
 ASM_SRCS =
 
 C_SRCS = \
-	src/main.c
+	src/main.c \
+	src/string.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
