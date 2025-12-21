@@ -4,6 +4,7 @@ CC = gcc
 
 CFLAGS = \
 	-m64 \
+	-Iinclude \
 	-fno-pie \
 	-nostdlib \
 	-Wall -Wextra \
