@@ -1,9 +1,20 @@
+#include "../kernel/include/types/types.h"
+
+/* Remove if types from types.h work fine
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 typedef uint32_t size_t;
+*/
 
+/*TODO: solve warnings. Could may help: change line underneath to
+ * 
+ * extern uint8_t _size_of_bootloader
+ * cause void don't have a size
+ *
+ * And: configure the cast-type in function bootloader_16_2 to fit the right 
+ * size*/
 extern void _size_of_bootloader;
 extern uint8_t _boot_disk;
 
