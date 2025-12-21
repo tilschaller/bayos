@@ -15,7 +15,7 @@
                 and then replace types in main.h with new types
 
 */
-#include "../include/types/types.h"
+#include <types/types.h>
 
 __attribute__((noreturn))
 void hcf() {
