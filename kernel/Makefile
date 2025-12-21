@@ -14,8 +14,9 @@ CFLAGS = \
 	-fno-ident
 
 ASM_SRCS =
+
 C_SRCS = \
-	main.c
+	src/main.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
