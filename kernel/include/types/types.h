@@ -2,8 +2,8 @@
  * [signed/unsigned][type][bits]_t
  * 
  */
-#ifndef _STDINT_H
-#define _STDINT_H
+#ifndef _TYPES_H
+#define _TYPES_H
 
 typedef signed char             int8_t;
 typedef unsigned char           uint8_t;
@@ -22,6 +22,6 @@ typedef unsigned long long int  uint64_t;
 typedef signed long long int    ptrdiff_t;
 
 /*I would say nothing should be bigger then 2^64 bytes ;)*/
-typedef unsigned long long int  size_t;
+typedef unsigned long int  size_t;
 
-#endif
+#endif // _TYPES_H

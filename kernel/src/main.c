@@ -1,20 +1,3 @@
-/*
-        TODO: add implementation of
-                memset
-                memcmp
-                memcpy
-                memmove
-                in string.h and string.c
-                and then remove -fno-builtin from Makefile
-        TODO: add header for standart types like
-                uint32_t -> unsigned int
-                uint16_t -> unsigned short
-                uint8_t -> unsigned long long
-                size_t .... 
-                etc.
-                and then replace types in main.h with new types
-
-*/
 #include <types/types.h>
 
 __attribute__((noreturn))
