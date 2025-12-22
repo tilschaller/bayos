@@ -24,7 +24,8 @@ C_SRCS = \
 	src/fail.c \
 	src/memory.c \
 	src/stdio/printf.c \
-	src/stdio/puts.c
+	src/stdio/puts.c \
+	src/gdt.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
