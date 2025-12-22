@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <gdt.h>
+#include <interrupts.h>
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -17,6 +18,7 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         printf("#########################\n");
 
         gdt_init();
-        
+        int_init();
+
         hcf();
 }

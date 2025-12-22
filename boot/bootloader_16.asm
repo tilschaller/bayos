@@ -231,6 +231,11 @@ _jump_to_kernel:
   mov fs, rax
   mov gs, rax
   mov ss, rax
+
+  ; enable nmi again
+  in ax, 0x70
+  and ax, 0x7f
+  out 0x70, ax
   
   mov esp, kernel_stack
   mov rax, 0xffff800000000000

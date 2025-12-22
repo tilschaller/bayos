@@ -9,7 +9,7 @@ img:
 
 .PHONY: run
 run: img
-	qemu-system-x86_64 -drive file=img/bayos-img,format=raw
+	qemu-system-x86_64 -drive file=img/bayos-img,format=raw -monitor stdio
 
 .PHONY: clean
 clean:

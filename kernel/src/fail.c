@@ -3,6 +3,6 @@
 __attribute__((noreturn))
 void hcf() {
         for (;;) {
-                asm volatile("hlt");
+                asm volatile("cli; hlt");
         }
 }
