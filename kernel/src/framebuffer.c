@@ -22,7 +22,7 @@ extern char _binary_zap_vga16_psf_end;
 typedef struct {
 	uint16_t magic;
 	uint8_t fontMode;
-    uint8_t characterSize;
+    	uint8_t characterSize;
 } PSF1_Header;
 
 /*
