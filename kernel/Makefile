@@ -7,10 +7,13 @@ CFLAGS = \
 	-Iinclude \
 	-nostdlib \
 	-Wall -Wextra \
+	-fno-pie \
+	-fno-builtin \
 	-fno-exceptions \
 	-fno-unwind-tables \
 	-fno-asynchronous-unwind-tables \
-	-fno-ident
+	-fno-ident \
+	-mcmodel=kernel
 
 ASM_SRCS =
 

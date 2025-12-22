@@ -10,15 +10,10 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
         video_mode_info *vinfo = phys_to_virt(video_info);
         fb_init(vinfo);
-        printf("bayos!");
-        /*
-        putchar('b');
-        putchar('a');
-        putchar('y');
-        putchar('o');
-        putchar('s');
-        putchar('!');
-        putchar('\n');
-        */
+
+        printf("#########################\n");
+        printf("#    Welcome to Bayos   #\n");
+        printf("#########################\n");
+
         hcf();
 }
