@@ -5,7 +5,6 @@ CC = gcc
 CFLAGS = \
 	-m64 \
 	-Iinclude \
-	-fno-pie \
 	-nostdlib \
 	-Wall -Wextra \
 	-fno-exceptions \
@@ -20,7 +19,8 @@ C_SRCS = \
 	src/string.c \
 	src/framebuffer.c \
 	src/fail.c \
-	src/memory.c
+	src/memory.c \
+	src/stdio/printf.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
