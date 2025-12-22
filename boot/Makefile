@@ -13,6 +13,8 @@ CFLAGS = \
 	-fno-exceptions \
 	-fno-unwind-tables \
 	-fno-asynchronous-unwind-tables \
+	-fno-stack-protector \
+	-mno-red-zone \
 	-fno-ident
 
 C_16_FLAGS = $(CFLAGS) -m16
