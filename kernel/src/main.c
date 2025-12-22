@@ -3,6 +3,7 @@
 #include <fail.h>
 #include <memory.h>
 #include <stdio.h>
+#include <gdt.h>
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -14,6 +15,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         printf("#########################\n");
         printf("#    Welcome to Bayos   #\n");
         printf("#########################\n");
+
+        gdt_init();
         
         hcf();
 }

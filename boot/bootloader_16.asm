@@ -223,6 +223,8 @@ EXTERN kernel_stack
 EXTERN gdtr_val
 BITS 64
 _jump_to_kernel:
+  ; TODO: remove kernel
+  ; from memory map, very important
   mov rax, 0x10
   mov ds, rax
   mov es, rax
@@ -230,8 +232,9 @@ _jump_to_kernel:
   mov gs, rax
   mov ss, rax
   
-  xor rsp, rsp
   mov esp, kernel_stack
+  mov rax, 0xffff800000000000
+  add rsp, rax
   mov rbp, rsp
   xor rdi, rdi
   xor rsi, rsi
