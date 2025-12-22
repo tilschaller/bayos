@@ -2,6 +2,7 @@
 #include <framebuffer.h>
 #include <fail.h>
 #include <memory.h>
+#include <stdio.h>
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -9,7 +10,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
         video_mode_info *vinfo = phys_to_virt(video_info);
         fb_init(vinfo);
-
+        printf("bayos!");
+        /*
         putchar('b');
         putchar('a');
         putchar('y');
@@ -17,6 +19,6 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         putchar('s');
         putchar('!');
         putchar('\n');
-
+        */
         hcf();
 }
