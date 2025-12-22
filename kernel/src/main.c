@@ -19,6 +19,6 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
         gdt_init();
         int_init();
-
+        
         hcf();
 }
