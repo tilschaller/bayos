@@ -23,7 +23,8 @@ C_SRCS = \
 	src/framebuffer.c \
 	src/fail.c \
 	src/memory.c \
-	src/stdio/printf.c
+	src/stdio/printf.c \
+	src/stdio/puts.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))

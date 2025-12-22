@@ -20,8 +20,8 @@ extern char _binary_zap_vga16_psf_end;
 
 #define PSF_FONT_MAGIC 0x0436
 typedef struct {
-    uint16_t magic;
-    uint8_t fontMode;
+	uint16_t magic;
+	uint8_t fontMode;
     uint8_t characterSize;
 } PSF1_Header;
 
@@ -38,6 +38,18 @@ typedef struct {
 #define CHAR_RASTER_WIDTH 8
 #define BACKUP_CHAR 32
 
+#define TAB_SIZE 8
+
+int32_t putchar(int32_t c);
+
+static uint64_t width() {
+	return (uint64_t)stdout.info->width;
+}
+
+static uint64_t height() {
+	return (uint64_t)stdout.info->height;
+}
+
 static void carriage_return() {
 	stdout.x_pos = BORDER_PADDING;
 }
@@ -47,13 +59,37 @@ static void newline() {
 	carriage_return();
 }
 
-
-static uint64_t width() {
-	return (uint64_t)stdout.info->height;
+static void backspace() {
+	/* if (for whatever reason) the current cursor position is smaller then a
+	 * single-character width, it should be set to the border. Also if the 
+	 * current position is at the 0, it is undefined in C99 standard, so we will
+	 * handle it to set x_pos at the border*/
+	if(stdout.x_pos < (CHAR_RASTER_WIDTH + BORDER_PADDING)) {
+		stdout.x_pos = BORDER_PADDING;
+	} else {
+		stdout.x_pos -= CHAR_RASTER_WIDTH;
+	}
 }
 
-static uint64_t height() {
-	return (uint64_t)stdout.info->height;
+
+uint64_t get_new_htab(uint64_t cur_x) {
+	/*Note: a next htab cannot be 0, so 0 will be handled as err-code*/
+	uint64_t htab = BORDER_PADDING;
+	while(cur_x >= htab) {
+		htab += TAB_SIZE * CHAR_RASTER_WIDTH;
+	}
+
+	return htab;
+}
+
+static void htab() {
+	/* if current position is between the last tab-stop and the end of screen
+	 * the overflow will be handled as a newline()*/
+	if(stdout.x_pos >= (width() - (TAB_SIZE * CHAR_RASTER_WIDTH))) {
+		newline();
+	} else {
+		stdout.x_pos = get_new_htab(stdout.x_pos);
+	}
 }
 
 static void clear() {
@@ -75,6 +111,13 @@ static void write_char(unsigned char c, uint32_t color) {
 		sizeof(PSF1_Header) + 
 		c * bytes_per_glyph;
 
+	/*clear current position before writing on it*/
+	for(int i = 0; i < CHAR_RASTER_HEIGHT; i++) {
+			for(int j = 0; j < CHAR_RASTER_WIDTH; j++) {
+				write_pixel(stdout.x_pos + j, stdout.y_pos + i, 0x000000);
+			}
+	}
+
 	for (int y = 0; y < CHAR_RASTER_HEIGHT; y++) {
 		uint8_t pixel_row = glyph[y];
 		for (int x = 0; x < CHAR_RASTER_WIDTH; x++) {
@@ -87,13 +130,19 @@ static void write_char(unsigned char c, uint32_t color) {
 	stdout.x_pos += CHAR_RASTER_WIDTH + LETTER_SPACING;
 }
 
-int putchar(int c) {
+int32_t putchar(int32_t c) {
 	switch (c) {
 	case '\n':
 		newline();
 		break;
 	case '\r':
 		carriage_return();
+		break;
+	case '\b':
+		backspace();
+		break;
+	case '\t':
+		htab();
 		break;
 	default:
 		uint64_t new_xpos = stdout.x_pos + CHAR_RASTER_WIDTH;
