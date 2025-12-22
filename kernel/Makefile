@@ -13,6 +13,8 @@ CFLAGS = \
 	-fno-unwind-tables \
 	-fno-asynchronous-unwind-tables \
 	-fno-ident \
+	-fno-stack-protector \
+	-mno-red-zone \
 	-mcmodel=kernel
 
 ASM_SRCS =
