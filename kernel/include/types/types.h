@@ -2,6 +2,9 @@
  * [signed/unsigned][type][bits]_t
  * 
  */
+
+#include <stdarg.h>
+
 #ifndef _TYPES_H
 #define _TYPES_H
 
@@ -23,5 +26,18 @@ typedef signed long long int    ptrdiff_t;
 
 /*I would say nothing should be bigger then 2^64 bytes ;)*/
 typedef unsigned long int  size_t;
+
+typedef enum {
+	S_CHAR,
+	U_CHAR,
+	S_SHORT,
+	U_SHORT,
+	S_INT,
+	U_INT,
+	S_LONG,
+	U_LONG,
+	S_LLONG,
+	U_LLONG
+} INT_TYPES;
 
 #endif // _TYPES_H
