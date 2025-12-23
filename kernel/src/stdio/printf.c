@@ -64,6 +64,7 @@ int32_t printf(const char *restrict format, ...) {
                         case 'o': /*see above*/
                                 break;
                         case 'x': case 'X': /*see above*/
+                                putstr(dec_to_hex(va_arg(ap, uint64_t)));
                                 break;
                         case 'u':
                                 printi(U_INT, ap);
