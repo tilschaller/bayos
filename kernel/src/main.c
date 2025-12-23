@@ -17,6 +17,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         printf("#    Welcome to Bayos   #\n");
         printf("#########################\n");
 
+        printf("%x", 789);
+
         gdt_init();
         int_init();
         mem_init(

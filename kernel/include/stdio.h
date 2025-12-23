@@ -2,6 +2,8 @@
 #define _STDIO_H
 
 #include <types/types.h>
+#include <num_sys.h>
+
 
 /*print a string of characters to screen. char-combinations with %* and \* will
  * be replaced by the equvalent characters returns number of printed characters
