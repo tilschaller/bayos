@@ -3,4 +3,4 @@
 
 void int_init(void);
 
-#endif // _INTERRUPTS_H
+#endif /* _INTERRUPTS_H */

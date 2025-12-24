@@ -40,4 +40,4 @@ typedef enum {
 	U_LLONG
 } INT_TYPES;
 
-#endif // _TYPES_H
+#endif /* _TYPES_H */

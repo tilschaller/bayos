@@ -4,4 +4,4 @@
 __attribute__((noreturn))
 void hcf(void);
 
-#endif // _FAIL_H
+#endif /* _FAIL_H */

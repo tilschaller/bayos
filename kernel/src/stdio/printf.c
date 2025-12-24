@@ -12,6 +12,7 @@ int32_t printf(const char *restrict format, ...) {
                 /* format specifier with reference to:
                  * https://en.cppreference.com/w/c/io/fprintf */
                 if(*format == '%') {
+                        const char *hex;
                         format++;
                         switch(*format) {
                         case 'h':
@@ -20,9 +21,18 @@ int32_t printf(const char *restrict format, ...) {
                                 case 'd': case 'i':
                                         printi(S_SHORT, ap);
                                         break;
-                                case 'o': /*implement dec to octal conv unsigned short*/
+                                case 'o':
+                                        putstr(dec_to_oct(va_arg(ap, uint32_t)));
                                         break;
-                                case 'x': case 'X': /*implement dec to hex conv unsigned short*/
+                                case 'x':
+                                        hex = dec_to_hex(va_arg(ap, uint32_t));
+                                        lhex((char *)hex);
+                                        putstr(hex);
+                                        break;
+                                case 'X':
+                                        hex = dec_to_hex(va_arg(ap, uint32_t));
+                                        uhex((char *)hex);
+                                        putstr(hex);
                                         break;
                                 case 'u':
                                         printi(U_SHORT, ap);
@@ -35,9 +45,18 @@ int32_t printf(const char *restrict format, ...) {
                                         case 'd': case 'i':
                                                 printi(S_CHAR, ap);
                                                 break;
-                                        case 'o': /*see above*/
+                                        case 'o':
+                                                putstr(dec_to_oct(va_arg(ap, uint32_t)));
                                                 break;
-                                        case 'x': case 'X': /*see above*/
+                                        case 'x':
+                                                hex = dec_to_hex(va_arg(ap, uint32_t));
+                                                lhex((char *)hex);
+                                                putstr(hex);
+                                                break;
+                                        case 'X':
+                                                hex = dec_to_hex(va_arg(ap, uint32_t));
+                                                uhex((char *)hex);
+                                                putstr(hex);
                                                 break;
                                         case 'u':
                                                 printi(U_CHAR, ap);
@@ -61,10 +80,18 @@ int32_t printf(const char *restrict format, ...) {
                         case 'd': case 'i':
                                 printi(S_INT, ap);
                                 break;
-                        case 'o': /*see above*/
+                        case 'o':
+                                putstr(dec_to_oct(va_arg(ap, uint32_t)));
                                 break;
-                        case 'x': case 'X': /*see above*/
-                                putstr(dec_to_hex(va_arg(ap, uint64_t)));
+                        case 'x':
+                                hex = dec_to_hex(va_arg(ap, uint32_t));
+                                lhex((char *)hex);
+                                putstr(hex);
+                                break;
+                        case 'X':
+                                hex = dec_to_hex(va_arg(ap, uint32_t));
+                                uhex((char *)hex);
+                                putstr(hex);
                                 break;
                         case 'u':
                                 printi(U_INT, ap);
@@ -91,9 +118,18 @@ int32_t printf(const char *restrict format, ...) {
                                 case 'd': case 'i':
                                         printi(S_LONG, ap);
                                         break;
-                                case 'o': /*see above*/
+                                case 'o':
+                                        putstr(dec_to_oct(va_arg(ap, uint64_t)));
                                         break;
-                                case 'x': case 'X': /*see above*/
+                                case 'x':
+                                        hex = dec_to_hex(va_arg(ap, uint64_t));
+                                        lhex((char *)hex);
+                                        putstr(hex);
+                                        break;
+                                case 'X':
+                                        hex = dec_to_hex(va_arg(ap, uint64_t));
+                                        uhex((char *)hex);
+                                        putstr(hex);
                                         break;
                                 case 'u':
                                         printi(U_LONG, ap);
@@ -114,9 +150,18 @@ int32_t printf(const char *restrict format, ...) {
                                         case 'd': case 'i':
                                                 printi(S_LLONG, ap);
                                                 break;
-                                        case 'o': /*see above*/
+                                        case 'o':
+                                                putstr(dec_to_oct(va_arg(ap, uint64_t)));
                                                 break;
-                                        case 'x': case 'X': /*see above*/
+                                        case 'x':
+                                                hex = dec_to_hex(va_arg(ap, uint64_t));
+                                                lhex((char *)hex);
+                                                putstr(hex);
+                                                break;
+                                        case 'X':
+                                                hex = dec_to_hex(va_arg(ap, uint64_t));
+                                                uhex((char *)hex);
+                                                putstr(hex);
                                                 break;
                                         case 'u':
                                                 printi(U_LLONG, ap);
