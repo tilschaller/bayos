@@ -13,4 +13,8 @@ down!
 2. Indentation
         - one indentation MUST be 8 spaces
         - DO NOT use the GNU double-indentation! It's just useless!
-        
+
+3. Comments
+        - we wanna achieve a uniform comment style. you shall use 
+          /**/-comments. //-comments are just ugly and not multi-line capable so
+          you must use /**/ for a uniform style.

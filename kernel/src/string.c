@@ -51,3 +51,28 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 
         return 0;
 }
+
+int32_t tolower(int32_t c) {
+        if((c >= 'A') && (c <= 'Z')) {
+                return (c - 'A' + 'a');
+        }
+
+        return c;
+}
+
+int32_t toupper(int32_t c) {
+        if((c >= 'a') && (c <= 'z')) {
+                return (c - 'a' + 'A');
+        }
+
+        return c;
+}
+
+int32_t isalpha(int32_t c) {
+        if(     ((c >= 'a') && (c <= 'z')) ||
+                ((c >= 'A') && (c <= 'Z'))      ) {
+                return 1;
+        } else {
+                return 0;
+        }
+}

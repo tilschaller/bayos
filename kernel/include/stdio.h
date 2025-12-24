@@ -19,4 +19,4 @@ int32_t printi(INT_TYPES t, va_list ap); 	/* print integer from x with type t.
 int32_t putstr(const char *s);
 int32_t puts(const char *s);
 
-#endif /*_STDIO_H*/
+#endif /* _STDIO_H */

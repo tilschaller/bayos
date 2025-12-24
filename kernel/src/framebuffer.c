@@ -161,7 +161,7 @@ int32_t putchar(int32_t c) {
 
 void fb_init(video_mode_info *info) {
 	stdout.info = info;
-	stdout.x_pos = 0;
-	stdout.y_pos = 0;
+	stdout.x_pos = BORDER_PADDING;
+	stdout.y_pos = BORDER_PADDING;
 	stdout.fb = phys_to_virt((uint64_t)info->phys_address);
 }

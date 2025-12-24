@@ -3,4 +3,4 @@
 
 void gdt_init(void);
 
-#endif // _GDT_H
+#endif /* _GDT_H */
