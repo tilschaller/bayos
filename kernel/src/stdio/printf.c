@@ -13,11 +13,9 @@ int32_t printf(const char *restrict format, ...) {
                  * https://en.cppreference.com/w/c/io/fprintf */
                 if(*format == '%') {
                         const char *hex;
-                        format++;
-                        switch(*format) {
+                        switch(*++format) {
                         case 'h':
-                                format++;
-                                switch(*format) {
+                                switch(*++format) {
                                 case 'd': case 'i':
                                         printi(S_SHORT, ap);
                                         break;
@@ -40,8 +38,7 @@ int32_t printf(const char *restrict format, ...) {
                                 case 'n': /*print how much chars printed yet short*/
                                 /*all cases for %h* until here, not %hh* */
                                 case 'h':
-                                        format++;
-                                        switch(*format) {
+                                        switch(*++format) {
                                         case 'd': case 'i':
                                                 printi(S_CHAR, ap);
                                                 break;
@@ -109,8 +106,7 @@ int32_t printf(const char *restrict format, ...) {
                         case 'p': /*print pointer, next TODO on my list*/
                                 break;
                         case 'l':
-                                format++;
-                                switch(*format) {
+                                switch(*++format) {
                                 case 'c': /*implementation not needed yet*/
                                         break;
                                 case 's': /*implementation not needed yet*/
@@ -145,8 +141,7 @@ int32_t printf(const char *restrict format, ...) {
                                 case 'n': /*see above*/
                                         break;
                                 case 'l':
-                                        format++;
-                                        switch(*format) {
+                                        switch(*++format) {
                                         case 'd': case 'i':
                                                 printi(S_LLONG, ap);
                                                 break;
@@ -171,12 +166,12 @@ int32_t printf(const char *restrict format, ...) {
                                         default:
                                                 break;
                                         }
+                                        break;
                                 default:
                                         break;
                                 }
                         case 'L':
-                                format++;
-                                switch(*format) {
+                                switch(*++format) {
                                 case 'f': case 'F': /*no float provided yet*/
                                         break;
                                 case 'e': case 'E': /*no float provided yet*/
@@ -187,9 +182,9 @@ int32_t printf(const char *restrict format, ...) {
                                         break;
                                 }
                         }
+                        format--;
                 } else {
-                        putchar((uint8_t)*format);
-                        char_cnt++;
+                        putchar(*format);
                 }
         }
         return char_cnt;
@@ -240,8 +235,10 @@ int32_t printi(INT_TYPES t, va_list ap) {
         }
 
         for(int i = 19; i >= 0; --i) {
-                putchar(digits[i]);
-                char_cnt++;
+                if (digits[i] != '0') {
+                        putchar(digits[i]);
+                        char_cnt++;
+                }
         }
         return char_cnt;
 }
