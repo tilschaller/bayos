@@ -28,7 +28,7 @@ static idtr idtr_val;
 __attribute__((noreturn))
 void exception_handler(uint64_t int_num) {
 	(void)int_num;
-	printf("\nInterrupt %llu  occured\nHalting execution\n", int_num);
+	printf("\nInterrupt %llu occured\nHalting execution\n", int_num);
 	asm volatile("cli; hlt");
 	__builtin_unreachable();
 }
