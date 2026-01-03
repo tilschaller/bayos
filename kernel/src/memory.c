@@ -20,6 +20,14 @@ void *virt_to_phys(uint64_t virt) {
 }
 
 typedef struct {
+	
+} __attribute__((packed)) memory_map_entry;
+typedef struct {
+	uint32_t num_of_entries;
+	memory_map_entry memory_map[];
+} __attribute__((packed)) memory_map;
+
+typedef struct {
         uint64_t *pml4;
 } memory_mapper;
 
@@ -39,6 +47,7 @@ void mem_init(void *memory_map) {
         uint64_t *pdpt_low = phys_to_virt(mapper.pml4[0] & 0xfff);
         /*
         pdpt_low is 0x1000 bytes long and can be used for other things
+	for example to map the kernel heap
         */
         /*
         unmap low memory
