@@ -32,6 +32,19 @@ typedef struct {
 	uint64_t align;
 } __attribute__((packed)) elf_program_header;
 
+// https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/15_System_Address_Map_Interfaces/int-15h-e820h---query-system-address-map.html
+typedef struct {
+	uint64_t addr;
+	uint64_t length;
+	uint32_t type;
+	uint32_t acpi;
+} __attribute__((packed)) memory_map_ent;
+
+typedef struct {
+	uint32_t number_of_ents;
+	memory_map_ent memory_map[];
+} __attribute__((packed)) memory_map;
+
 __attribute__((section(".bootloader32")))
 void* memset(void* bufptr, int value, size_t size) {
 	unsigned char* buf = (unsigned char*) bufptr;
@@ -61,11 +74,11 @@ gdtr gdtr_val = {
 __attribute__((section(".bootloader32var"), aligned(16)))
 uint8_t kernel_stack[0x1000] = {};
 
-extern void _memory_map_entries;
 extern void _vbe_mode_info;
 extern void _size_of_bootloader;
 extern uint32_t load_addr_of_ph[20];
 extern elf_program_header *ph;
+extern memory_map _memory_map_entries;
 
 __attribute__((section(".bootloader32"), noreturn))
 void bootloader_32(void) {
@@ -135,11 +148,11 @@ void bootloader_32(void) {
 	*/
 	pml4[0] = (uint64_t)(uint32_t)pdpt_low | 0x3;
 	uint64_t addr = 0;
-	// this maps the first 100 gb of physical memory, 
+	// this maps the first 25gb of physical memory, 
 	// into higher half and identity maps the first gb
 	// which should be enough for the kernel
 	// to start up at least
-	for (int i = 0; i < 100; i++) {
+	for (uint32_t i = 0; i < 250; i++) {
 		if (i == 0) {
 			pdpt_low[i] = (uint64_t)(uint32_t)&pd_low[i * 512] | 0x3;
 		}
@@ -150,6 +163,22 @@ void bootloader_32(void) {
 		}
 	}
 	pml4[256] = (uint64_t)(uint32_t)pdpt_high | 0x3;
+
+	// check if all memory is mapped with 250 gb
+	// by calculating the highest address in address space
+	uint64_t highest = 0;
+	for (uint32_t i = 0; i < _memory_map_entries.number_of_ents; i++) {
+		if (_memory_map_entries.memory_map[i].type == 1) {
+			uint64_t comp = _memory_map_entries.memory_map[i].addr + _memory_map_entries.memory_map[i].length;
+			if (comp > highest) highest = comp;
+		}
+	}
+	// We just halt for now
+	// should never happen on qemu, maybe with real pcs it is more likely		
+	if (highest > ((uint64_t)0x40000000 * 250)) {
+		asm volatile("mov %0, %%eax" : : "r"(highest) : "eax");
+		asm volatile("hlt");
+	}
 
 	/*
 	write pml4 into cr3
@@ -188,4 +217,5 @@ void bootloader_32(void) {
 	for (;;) {
 		asm volatile("hlt");
 	}
+	__builtin_unreachable();
 }
