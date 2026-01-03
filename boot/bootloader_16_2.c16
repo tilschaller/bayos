@@ -127,7 +127,6 @@ void bootloader_16_2(void) {
 	now we can read the program headers into memory
 	the start is the remainder of the offset divided by 512
 	since we divided down
-	TODO: create a global list to store this, so we can place it earlier in memory
   	*/
   	read_from_disk(_boot_disk, num_of_sectors_ph, ph_addr, 0, lba_of_ph);
   	ph = (elf_program_header*)((uint32_t)ph_addr + ((uint32_t)elf->phoff % 512));

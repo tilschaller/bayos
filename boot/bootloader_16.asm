@@ -51,7 +51,7 @@ __a20_activated:
 	call _print_char
 
   ; fetch e820 memory map
-  mov di, _memory_map
+  mov di, _memory_map_entries + 4
   xor bp, bp
   mov edx, 0x0534D4150
   mov eax, 0xe820
@@ -202,7 +202,6 @@ _halt_and_catch_fire:
 
 _memory_map_entries:
   dw 0
-_memory_map:
   times 24 * 128 db 0
 
 _vbe_info:
@@ -223,8 +222,6 @@ EXTERN kernel_stack
 EXTERN gdtr_val
 BITS 64
 _jump_to_kernel:
-  ; TODO: remove kernel
-  ; from memory map, very important
   mov rax, 0x10
   mov ds, rax
   mov es, rax
@@ -247,4 +244,4 @@ _jump_to_kernel:
   mov esi, _vbe_mode_info
   mov rax, [abs 0x7c00+24]
   jmp rax
-  
+  hlt
