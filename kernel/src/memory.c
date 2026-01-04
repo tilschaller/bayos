@@ -4,12 +4,6 @@
 #include <fail.h>
 #include <string.h>
 
-/*
-the heap is placed directly beneath the kernel
-*/
-#define HEAP_LENGTH 0x200000
-#define HEAP_ADDRESS 0xffffffff80000000 - HEAP_LENGTH
-
 void *phys_to_virt(uint64_t phys) {
         /*
                 we have a offset page table from bootloader 
