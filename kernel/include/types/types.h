@@ -23,6 +23,7 @@ typedef unsigned long long int  uint64_t;
 /*Note: when subtracting two pointers on 64bit, the difference should not be 
  * in range of int64_t*/
 typedef signed long long int    ptrdiff_t;
+typedef unsigned long long int  uintptr_t;
 
 /*I would say nothing should be bigger then 2^64 bytes ;)*/
 typedef unsigned long int  size_t;

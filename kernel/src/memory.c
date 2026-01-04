@@ -2,6 +2,13 @@
 #include <types/types.h>
 #include <stdio.h>
 #include <fail.h>
+#include <string.h>
+
+/*
+the heap is placed directly beneath the kernel
+*/
+#define HEAP_LENGTH 0x200000
+#define HEAP_ADDRESS 0xffffffff80000000 - HEAP_LENGTH
 
 void *phys_to_virt(uint64_t phys) {
         /*
@@ -32,12 +39,6 @@ typedef struct {
 	uint32_t num_of_entries;
 	memory_map_entry memory_map[];
 } __attribute__((packed)) memory_map;
-
-typedef struct {
-        uint64_t *pml4;
-} memory_mapper;
-
-memory_mapper mapper;
 	
 typedef struct {
 	memory_map *memory_map;
@@ -57,7 +58,10 @@ static uint64_t next_region(void) {
         return 0;
 }
 
-void *allocate_frame(void) {
+/*
+returns the physical address of an unused 4KB page
+*/
+uintptr_t allocate_frame(void) {
         start:
 	memory_map_entry *r = &f_allocator.memory_map->memory_map[f_allocator.region];
         f_allocator.offset += 0x1000;
@@ -66,7 +70,7 @@ void *allocate_frame(void) {
                 if (return_addr < 0x400000) {
                         goto start;
                 } else {
-                        return (void*)return_addr; 
+                        return return_addr; 
 
                 }
         } else {
@@ -79,6 +83,52 @@ void *allocate_frame(void) {
                         goto start;
                 }
         }
+}
+
+
+typedef struct {
+        uint64_t *pml4;
+} memory_mapper;
+
+memory_mapper mapper;
+
+/*
+maps a 4KB phyiscal page to virt address
+flags is unused
+*/
+void map_to(uintptr_t phys, uintptr_t virt, int flags) {
+        (void)flags; 
+
+        size_t level_4_entry = (virt >> 39) & 0x1ff;
+        size_t level_3_entry = (virt >> 30) & 0x1ff;
+        size_t level_2_entry = (virt >> 21) & 0x1ff;
+        size_t level_1_entry = (virt >> 12) & 0x1ff;
+
+        /*
+        now check if the pages already exists
+        */
+        if ((mapper.pml4[level_4_entry] & 1) == 0) {
+                uintptr_t frame = allocate_frame();
+                memset(phys_to_virt(frame), 0, 0x1000);
+                mapper.pml4[level_4_entry] = frame | 3;
+        }
+        uint64_t *level_3 = phys_to_virt(mapper.pml4[level_4_entry] & ~(0xfff));
+        if ((level_3[level_3_entry] & 1) == 0) {
+                uintptr_t frame = allocate_frame();
+                memset(phys_to_virt(frame), 0, 0x1000);
+                level_3[level_3_entry] = frame | 3;
+        }
+        uint64_t *level_2 = phys_to_virt(level_3[level_3_entry] & ~(0xfff));
+        if ((level_2[level_2_entry] & 1) == 0) {
+                uintptr_t frame = allocate_frame();
+                memset(phys_to_virt(frame), 0, 0x1000);
+                level_2[level_2_entry] = frame | 3;
+        }
+        uint64_t *level_1 = phys_to_virt(level_2[level_2_entry] & ~(0xfff));
+        level_1[level_1_entry] = phys | 3;
+
+        asm volatile("invlpg (%0)" :: "r"(virt) : "memory");
+
 }
 
 void mem_init(void *mm) {
@@ -123,4 +173,13 @@ void mem_init(void *mm) {
 
 
         if (f_allocator.offset != 0) hcf();
+
+        /*
+        create a address space for the heap
+        */
+        for (int i = 0; i < HEAP_LENGTH / 0x1000; i++) {
+                uintptr_t frame = allocate_frame();
+                uintptr_t addr = HEAP_ADDRESS + i * 0x1000;
+                map_to(frame, addr, 0);
+        }
 }
