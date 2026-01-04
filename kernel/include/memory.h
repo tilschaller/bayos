@@ -7,7 +7,7 @@
 the heap is placed directly beneath the kernel
 */
 #define HEAP_LENGTH 0x200000
-#define HEAP_ADDRESS 0xffffffff80000000 - HEAP_LENGTH
+#define HEAP_ADDRESS (0xffffffff80000000 - HEAP_LENGTH)
 
 void *phys_to_virt(uint64_t phys);
 void *virt_to_phys(uint64_t virt);

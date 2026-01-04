@@ -15,7 +15,8 @@ CFLAGS = \
 	-fno-ident \
 	-fno-stack-protector \
 	-mno-red-zone \
-	-mcmodel=kernel
+	-mcmodel=kernel \
+	-MMD
 
 ASM_SRCS = \
 	src/exception_handler.asm
@@ -30,11 +31,14 @@ C_SRCS = \
 	src/stdio/puts.c \
 	src/gdt.c \
 	src/interrupts.c \
-	src/stdio/num_sys.c
+	src/stdio/num_sys.c \
+	src/alloc.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
 OBJS = $(ASM_OBJS) $(C_OBJS)
+
+-include $(C_OBJS:.o=.d)
 
 kernel: $(OBJS) kernel.ld Makefile assets/font.o
 	$(LD) -o $@ $(OBJS) assets/font.o -T kernel.ld
@@ -47,7 +51,7 @@ kernel: $(OBJS) kernel.ld Makefile assets/font.o
 
 .PHONY: clean
 clean:
-	rm -f kernel $(OBJS)
+	rm -f kernel $(OBJS) $(C_OBJS:.o=.d)
 
 .PHONY: install
 install: kernel
