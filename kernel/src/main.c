@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <gdt.h>
 #include <interrupts.h>
+#include <alloc.h>
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -22,5 +23,10 @@ void _start(uint64_t memory_map, uint64_t video_info) {
                 phys_to_virt(memory_map)
         );
 
+        free(alloc(5));
+        free(alloc(10));
+        free(alloc(9));
+
+        printf("Reached end of kernel code\n");
         hcf();
 }
