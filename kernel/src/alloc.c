@@ -5,34 +5,75 @@
 #define USED 1
 #define FREE 0
 
-typedef struct {
+typedef struct heap_node {
 	size_t size;
 	uint8_t status;
+	struct heap_node *prev;
+	struct heap_node *next;
 } heap_node;
 
 heap_node *heap_start = (heap_node*)HEAP_ADDRESS;
-heap_node *heap_end_pos = (heap_node*)HEAP_ADDRESS;
 
 void *alloc(size_t size) {
-	heap_node *cur_pos = heap_start;
-
-	while (cur_pos < heap_end_pos) {
-		if (cur_pos->size >= size && cur_pos->status == FREE) {
-			cur_pos->status = USED;
-			return (void*)(cur_pos + 1);
-		}
-		cur_pos = (heap_node*)((uint8_t*)(cur_pos + 1) + cur_pos->size);
+	if (size < 0x20) {
+		size = 0x20;
 	}
-	heap_end_pos->size = size;
-	heap_end_pos->status = USED;
-	heap_node *addr_to_ret = heap_end_pos + 1;
-	heap_end_pos = (heap_node*)((uint8_t*)(heap_end_pos + 1) + heap_end_pos->size);
-	return (void*)addr_to_ret;
+
+	heap_node *cur_node = heap_start;
+
+	while (cur_node != NULL) {
+		if (cur_node->size == size && cur_node->status == FREE) {
+			cur_node->status = USED;
+			return (void*)(cur_node + 1);
+		}
+		if (cur_node->size >= (size + sizeof(heap_node) + 0x20) && cur_node->status == FREE) {
+			heap_node *new_node = (heap_node*)((uintptr_t)cur_node + size + sizeof(heap_node));
+			new_node->size = cur_node->size - size - sizeof(heap_node);
+			new_node->status = FREE;
+			new_node->prev = cur_node;
+			new_node->next = cur_node->next;
+			if (cur_node->next != NULL) {
+				cur_node->next->prev = new_node;
+			}
+			cur_node->next = new_node;
+			cur_node->status = USED;
+			cur_node->size = size;
+			return (void*)(cur_node + 1);
+		}
+		cur_node = cur_node->next;
+	}
+	return 0;
 }
 
 void free(void *ptr) {
+	if (ptr == NULL) return;
+	if ((uintptr_t)ptr < HEAP_ADDRESS || (uintptr_t)ptr >= HEAP_ADDRESS + HEAP_LENGTH) return;
 	heap_node *node = (heap_node*)((uint8_t*)ptr - sizeof(heap_node));
-	if (node->status == USED) {
-		node->status = FREE;
+	if (node->status == FREE) return;
+	node->status = FREE;
+	heap_node *prev = node->prev;
+	heap_node *next = node->next;
+	if (prev != NULL && prev->status == FREE) {
+		prev->size = prev->size + node->size + sizeof(heap_node);
+		prev->next = next;
+		if (next != NULL) {
+			next->prev = prev;
+		}
+		node = prev;
 	}
+	if (next != NULL && next->status == FREE) {
+		node->size = next->size + node->size + sizeof(heap_node);
+		node->next = next->next;
+		if (node->next != NULL) {
+			node->next->prev = node;
+		}
+	}
+}
+
+void heap_init() {
+	heap_node *node = heap_start;
+	node->prev = NULL;
+	node->next = NULL;
+	node->status = FREE;
+	node->size = HEAP_LENGTH - sizeof(heap_node);
 }
