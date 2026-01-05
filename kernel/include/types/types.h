@@ -41,4 +41,6 @@ typedef enum {
 	U_LLONG
 } INT_TYPES;
 
+#define NULL 0
+
 #endif /* _TYPES_H */
