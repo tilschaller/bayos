@@ -210,7 +210,7 @@ int32_t printi(INT_TYPES t, va_list ap) {
                 val = (int32_t) va_arg(ap, int);
                 break;
         case S_LONG: case U_LONG: case S_LLONG: case U_LLONG:
-                val = (int64_t) va_arg(ap, int);
+                val = (int64_t) va_arg(ap, long int);
                 break;
         }
 
@@ -235,10 +235,8 @@ int32_t printi(INT_TYPES t, va_list ap) {
         }
 
         for(int i = 19; i >= 0; --i) {
-                if (digits[i] != '0') {
                         putchar(digits[i]);
                         char_cnt++;
-                }
         }
         return char_cnt;
 }
