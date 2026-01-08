@@ -23,7 +23,7 @@ void _start(uint64_t memory_map, uint64_t video_info) {
                 phys_to_virt(memory_map)
         );
         heap_init();
-
+        
         printf("Reached end of kernel code\n");
         hcf();
 }
