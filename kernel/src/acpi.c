@@ -1,0 +1,174 @@
+#include <acpi.h>
+#include <types/types.h>
+#include <memory.h>
+#include <string.h>
+#include <fail.h>
+#include <stdio.h>
+
+static inline void write_port_u8(uint16_t port, uint8_t val) {
+	asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) : );
+}
+
+static inline uint8_t read_port_u8(uint16_t port) {
+	uint8_t ret;
+	asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port) : );
+	return ret;
+}
+
+uint32_t *lapic = 0;
+
+inline void send_eoi(void) {
+	lapic[44] = 0;
+}
+
+typedef struct {
+	char signature[8];
+	uint8_t checksum;
+	char oemid[6];
+	uint8_t revision;
+	uint32_t rsdt_addr;
+	uint32_t length;
+	uint64_t xsdt_addr;
+	uint8_t extended_checksum;
+	uint8_t reserved[3];
+} __attribute__((packed)) xsdp;
+
+typedef struct {
+	char signature[4];
+	uint32_t length;
+	uint8_t revision;
+	uint8_t checksum;
+	char oemid[6];
+	char oemtableid[8];
+	uint32_t oem_revision;
+	uint32_t creator_id;
+	uint32_t creator_revision;
+} __attribute__((packed)) acpi_header;
+
+typedef struct {
+	acpi_header header;
+	uint32_t pointer[];
+} xsdt;
+
+typedef struct {
+	acpi_header header;
+	uint32_t lapic_addr;
+	uint32_t flags;
+} madt;
+
+void acpi_init(void) {
+	// first disale the legacy pic
+#define PIC_1_CMD_PORT 0x20
+#define PIC_1_DAT_PORT 0x21
+#define PIC_2_CMD_PORT 0xa0
+#define PIC_2_DAT_PORT 0xa1
+	write_port_u8(PIC_1_CMD_PORT, 0x11);
+	write_port_u8(PIC_2_CMD_PORT, 0x11);
+
+	write_port_u8(PIC_1_DAT_PORT, 0xf8);
+	write_port_u8(PIC_2_DAT_PORT, 0xf0);
+
+	write_port_u8(PIC_1_DAT_PORT, 0x4);
+	write_port_u8(PIC_2_DAT_PORT, 0x2);
+	
+	write_port_u8(PIC_1_DAT_PORT, 0x1);
+	write_port_u8(PIC_2_DAT_PORT, 0x1);
+
+	write_port_u8(PIC_1_DAT_PORT, 0xff);
+	write_port_u8(PIC_1_DAT_PORT, 0xff);
+
+	// find the rsdp in bios area
+	// 0xe0000 - 0xfffff
+	// just hope no gargabe memory has signature
+	xsdp *xsdp = 0;
+	for (uintptr_t i = 0xe0000; i <= 0xfffff; i += 16) {
+		int res = memcmp(phys_to_virt(i), "RSD PTR ", 8);
+		if (res == 0) {
+			xsdp = phys_to_virt(i);
+			break;
+		}
+	}
+	if (xsdp == NULL) {
+		printf("Could not find rsdp\n");
+		hcf();
+	}
+
+	if (xsdp->revision != 0) {
+		printf("ACPI version not supported\n");
+		hcf();
+	}
+
+	xsdt *rsdt = phys_to_virt(xsdp->rsdt_addr);
+	if (xsdp->rsdt_addr == 0 || rsdt == NULL || memcmp(rsdt->header.signature, "RSDT", 4) != 0) {
+		printf("Could not find rsdt\n");
+		hcf();
+	}
+
+	madt *madt;
+	for (int i = 0; i < (int)((rsdt->header.length - sizeof(acpi_header)) / 4); i++) {
+		acpi_header *header = phys_to_virt(rsdt->pointer[i]);
+		if (header == NULL) continue;
+		int res = memcmp(header->signature, "APIC", 4);
+		if (res == 0) {
+			madt = (void*)header;
+			break;
+		}
+	}
+	if (madt == NULL) {
+		printf("Could not find madt\n");
+		hcf();
+	}
+
+	lapic = phys_to_virt(madt->lapic_addr);
+
+	if (lapic == 0) {
+		printf("Could not find lapic\n");
+		hcf();
+	}
+	
+	// init lapic to well known state
+	lapic[56] = 0xffffffff;
+	lapic[52] = (lapic[52] & 0xffffff) | 1;
+	lapic[200] = 0x10000;
+	lapic[208] = (4 << 8) | (1 << 16);
+	lapic[212] = 0x10000;
+	lapic[216] = 0x10000;
+	lapic[32] = 0;
+
+	// set lapic internal error vector
+	lapic[220] = 34 | 0x100; 
+	// set spurious interrupt vector
+	lapic[60] = 0xff | 0x100;
+
+	// enable lapic timer
+	lapic[200] = 32 | 0x100;
+	lapic[248] = 0x3;
+
+	// configure the pit
+	write_port_u8(0x61, (read_port_u8(0x61) & 0xfd) | 1);
+	write_port_u8(0x43, 0b10110010);
+	write_port_u8(0x42, 0x9b);
+	read_port_u8(0x60);
+	write_port_u8(0x42, 0x2e);
+
+	lapic[200] |= 0x10000;
+	lapic[224] = 0xffffffff;
+
+	uint8_t val = read_port_u8(0x61) & 0xfe;
+	write_port_u8(0x61, val);
+	write_port_u8(0x61, val | 1);
+
+	while (read_port_u8(0x61) & 0x20 == 0) {}
+
+	lapic[200] = 0x10000;
+
+	uint32_t ticks_in_10ms = 0xffffffff - lapic[228];
+
+	lapic[200] = 32 | 0x20000;
+	lapic[248] = 0x3;
+	lapic[224] = ticks_in_10ms;
+
+	uint32_t lapic_id = lapic[8];
+
+	// configure io_apic
+}
