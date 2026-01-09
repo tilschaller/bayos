@@ -6,6 +6,7 @@
 #include <gdt.h>
 #include <interrupts.h>
 #include <alloc.h>
+#include <acpi.h>
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -23,6 +24,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
                 phys_to_virt(memory_map)
         );
         heap_init();
+
+	acpi_init();
         
         printf("Reached end of kernel code\n");
         hcf();

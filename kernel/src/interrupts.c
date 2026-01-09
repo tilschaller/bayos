@@ -47,6 +47,9 @@ void idt_set_descriptor(uint8_t entry, uint64_t isr, uint8_t flags, uint8_t ist)
 	defined in exception_handler.asm
 */
 extern uint64_t isr_stub_table[32];
+extern uintptr_t apic_error_handler;
+extern uintptr_t spurious_handler;
+extern uintptr_t timer_handler;
 
 void int_init(void) {
 	/*
@@ -71,6 +74,10 @@ void int_init(void) {
 			idt_set_descriptor(i, isr_stub_table[i], 0x8e, 0);
 		}
 	}
+
+	idt_set_descriptor(32, timer_handler, 0x8e, 0);
+	idt_set_descriptor(34, apic_error_handler, 0x8e, 0);
+	idt_set_descriptor(0xff, spurious_handler, 0x8e, 0);
 
 	asm volatile("lidt %0" : : "m"(idtr_val) : "memory");
 }
