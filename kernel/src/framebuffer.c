@@ -59,19 +59,6 @@ static void newline() {
 	carriage_return();
 }
 
-static void backspace() {
-	/* if (for whatever reason) the current cursor position is smaller then a
-	 * single-character width, it should be set to the border. Also if the 
-	 * current position is at the 0, it is undefined in C99 standard, so we will
-	 * handle it to set x_pos at the border*/
-	if(stdout.x_pos < (CHAR_RASTER_WIDTH + BORDER_PADDING)) {
-		stdout.x_pos = BORDER_PADDING;
-	} else {
-		stdout.x_pos -= CHAR_RASTER_WIDTH;
-	}
-}
-
-
 uint64_t get_new_htab(uint64_t cur_x) {
 	/*Note: a next htab cannot be 0, so 0 will be handled as err-code*/
 	uint64_t htab = BORDER_PADDING;
@@ -104,19 +91,30 @@ static void write_pixel(uint64_t x, uint64_t y, uint32_t color) {
 	fb[x + (y * (stdout.info->pitch / 4))] = color;
 }
 
+static void backspace() {
+	/* if (for whatever reason) the current cursor position is smaller then a
+	 * single-character width, it should be set to the border. Also if the 
+	 * current position is at the 0, it is undefined in C99 standard, so we will
+	 * handle it to set x_pos at the border*/
+	if(stdout.x_pos < (CHAR_RASTER_WIDTH + BORDER_PADDING)) {
+		stdout.x_pos = BORDER_PADDING;
+	} else {
+		stdout.x_pos -= CHAR_RASTER_WIDTH;
+	}
+
+	for(int i = 0; i < CHAR_RASTER_HEIGHT; i++) {
+			for(int j = 0; j < CHAR_RASTER_WIDTH; j++) {
+				write_pixel(stdout.x_pos + j, stdout.y_pos + i, 0x000000);
+			}
+	}
+}
+
 static void write_char(unsigned char c, uint32_t color) {
 	int bytes_per_glyph = (CHAR_RASTER_WIDTH * CHAR_RASTER_HEIGHT) / 8;
 
 	uint8_t *glyph = (uint8_t*)&_binary_zap_vga16_psf_start + 
 		sizeof(PSF1_Header) + 
 		c * bytes_per_glyph;
-
-	/*clear current position before writing on it*/
-	for(int i = 0; i < CHAR_RASTER_HEIGHT; i++) {
-			for(int j = 0; j < CHAR_RASTER_WIDTH; j++) {
-				write_pixel(stdout.x_pos + j, stdout.y_pos + i, 0x000000);
-			}
-	}
 
 	for (int y = 0; y < CHAR_RASTER_HEIGHT; y++) {
 		uint8_t pixel_row = glyph[y];
