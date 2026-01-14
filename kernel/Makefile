@@ -16,7 +16,8 @@ CFLAGS = \
 	-fno-stack-protector \
 	-mno-red-zone \
 	-mcmodel=kernel \
-	-MMD
+	-MMD \
+	-mgeneral-regs-only 
 
 ASM_SRCS = \
 	src/exception_handler.asm
@@ -33,7 +34,8 @@ C_SRCS = \
 	src/interrupts.c \
 	src/stdio/num_sys.c \
 	src/alloc.c \
-	src/acpi.c
+	src/acpi.c \
+	src/ports.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))

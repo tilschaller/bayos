@@ -4,16 +4,7 @@
 #include <string.h>
 #include <fail.h>
 #include <stdio.h>
-
-static inline void write_port_u8(uint16_t port, uint8_t val) {
-	asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) : );
-}
-
-static inline uint8_t read_port_u8(uint16_t port) {
-	uint8_t ret;
-	asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port) : );
-	return ret;
-}
+#include <ports.h>
 
 uint32_t *lapic = 0;
 
@@ -48,13 +39,23 @@ typedef struct {
 typedef struct {
 	acpi_header header;
 	uint32_t pointer[];
-} xsdt;
+} __attribute__((packed)) xsdt;
 
 typedef struct {
 	acpi_header header;
 	uint32_t lapic_addr;
 	uint32_t flags;
-} madt;
+	// madt_entry_x entries[]
+} __attribute__((packed)) madt;
+
+typedef struct {
+	uint8_t type; // is 1
+	uint8_t length;
+	uint8_t id;
+	uint8_t reserved;
+	uint32_t addr;
+	uint32_t global_system_interrupt_base;
+} __attribute__((packed)) madt_entry_io_apic;
 
 void acpi_init(void) {
 	// first disale the legacy pic
@@ -75,7 +76,7 @@ void acpi_init(void) {
 	write_port_u8(PIC_2_DAT_PORT, 0x1);
 
 	write_port_u8(PIC_1_DAT_PORT, 0xff);
-	write_port_u8(PIC_1_DAT_PORT, 0xff);
+	write_port_u8(PIC_2_DAT_PORT, 0xff);
 
 	// find the rsdp in bios area
 	// 0xe0000 - 0xfffff
@@ -158,7 +159,7 @@ void acpi_init(void) {
 	write_port_u8(0x61, val);
 	write_port_u8(0x61, val | 1);
 
-	while (read_port_u8(0x61) & 0x20 == 0) {}
+	while ((read_port_u8(0x61) & 0x20) == 0) {}
 
 	lapic[200] = 0x10000;
 
@@ -171,4 +172,30 @@ void acpi_init(void) {
 	uint32_t lapic_id = lapic[8];
 
 	// configure io_apic
+	// first find all io apics
+	for (void *addr = (void*)madt + 0x2c; addr < (void*)madt + madt->header.length;) {
+		madt_entry_io_apic *io_apic = (madt_entry_io_apic*)addr;
+		if (io_apic->type == 1) {
+			volatile uint16_t *ioregsel = phys_to_virt(io_apic->addr);
+			volatile uint32_t *ioregwin = phys_to_virt(io_apic->addr + 16);
+
+			*ioregsel = 1;
+			uint8_t num_of_irqs = ((*ioregwin >> 16) & 0xff) - 1;
+
+			for (uint16_t i = 0; i < num_of_irqs; i++) {
+				*ioregsel = 0x10 + i * 2;
+				*ioregwin = 1 << 16;
+				*ioregsel = 0x11 + i * 2;
+				*ioregwin = 0;
+			}
+
+			if (io_apic->global_system_interrupt_base == 0) {
+				*ioregsel = 0x12;
+				*ioregwin = 33;
+				*ioregsel = 0x13;
+				*ioregwin = lapic_id << 24;
+			}
+		}
+		addr += io_apic->length;
+	} 
 }
