@@ -1,8 +1,10 @@
 #include <interrupts.h>
 #include <types/types.h>
 #include <stdio.h>
+#include <framebuffer.h>
 #include <acpi.h>
 #include <ports.h>
+#include <keyboard.h>
 
 typedef struct {
 	uint16_t isr_low;
@@ -38,15 +40,22 @@ void exception_handler(uint64_t int_num) {
 __attribute__((interrupt))
 void keyboard_handler(void *stack_frame) {
 	(void)stack_frame;
-	uint8_t scancode = read_port_u8(0x60);
-	printf("Key pressed\n");
+	
+	uint8_t c = get_key();
+
+	if (c)
+		putchar((int)c);
+
 	send_eoi();
 }
 
+// time is in ms since boot, all timer interrupts should be 10ms apart, so we add 10 each interrupt
+// NOTE: this is not that accurate
+uint64_t time = 0;
 __attribute__((interrupt))
 void timer_handler(void *stack_frame) {
 	(void)stack_frame;
-	// printf(".");
+	time += 10;
 	send_eoi();
 }
 

@@ -35,7 +35,8 @@ C_SRCS = \
 	src/stdio/num_sys.c \
 	src/alloc.c \
 	src/acpi.c \
-	src/ports.c
+	src/ports.c \
+	src/keyboard.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
