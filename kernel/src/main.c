@@ -7,6 +7,13 @@
 #include <interrupts.h>
 #include <alloc.h>
 #include <acpi.h>
+#include <scheduler.h>
+
+void wait(void) {
+	while (1) {
+		asm volatile("hlt");
+	}
+}
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
@@ -26,6 +33,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         heap_init();
 
 	acpi_init();
+	
+	sched_init();
 
 	enable_interrupts();
 
@@ -33,5 +42,5 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 		asm volatile("hlt");
 	}
 
-        hcf();
+        __builtin_unreachable();
 }

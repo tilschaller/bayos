@@ -4,7 +4,7 @@ typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 typedef uint32_t size_t;
 
-extern void _size_of_bootloader;
+extern const void _size_of_bootloader;
 extern uint8_t _boot_disk;
 
 typedef struct {
@@ -111,7 +111,7 @@ void bootloader_16_2(void) {
 	next we need to load the array of program headers into memory
 	we will place this after the bootloader, but aligned to 512
   	*/
-  	uint16_t ph_addr = 0x7e00 + (uint16_t)&_size_of_bootloader;
+  	uint16_t ph_addr = 0x7e00 + (uint16_t)(uint32_t)&_size_of_bootloader;
   	/*
 	lba of ph is the offset on the disk aligned down
   	*/
