@@ -5,6 +5,8 @@
 #include <acpi.h>
 #include <ports.h>
 #include <keyboard.h>
+#include <scheduler.h>
+#include <fail.h>
 
 typedef struct {
 	uint16_t isr_low;
@@ -32,15 +34,13 @@ static idtr idtr_val;
 __attribute__((noreturn))
 void exception_handler(uint64_t int_num) {
 	(void)int_num;
-	printf("Interrupt %llx occured\nHalting execution\n", int_num);
-	asm volatile("cli; hlt");
-	__builtin_unreachable();
+	printf("Exception %llx occured\n", int_num);
+	hcf();
 }
 
-__attribute__((interrupt))
-void keyboard_handler(void *stack_frame) {
-	(void)stack_frame;
-	
+void keyboard_handler(cpu_status_t *context) {
+	(void)context;
+
 	uint8_t c = get_key();
 
 	if (c)
@@ -52,23 +52,23 @@ void keyboard_handler(void *stack_frame) {
 // time is in ms since boot, all timer interrupts should be 10ms apart, so we add 10 each interrupt
 // NOTE: this is not that accurate
 uint64_t time = 0;
-__attribute__((interrupt))
-void timer_handler(void *stack_frame) {
-	(void)stack_frame;
+cpu_status_t *timer_handler(cpu_status_t *old_context) {
 	time += 10;
+
+	cpu_status_t *new_context = schedule(old_context);
+
 	send_eoi();
+
+	return new_context;
 }
 
-__attribute__((interrupt))
-void apic_error_handler(void *stack_frame) {
-	(void)stack_frame;
+void apic_error_handler(cpu_status_t *context) {
+	(void)context;
 	printf("Internal Apic error occured\n");
-	asm volatile("iretq");
 }
 
-__attribute__((interrupt))
-void spurious_handler(void *stack_frame) {
-	(void)stack_frame;
+void spurious_handler(cpu_status_t *context) {
+	(void)context;
 }
 
 void idt_set_descriptor(uint8_t entry, uint64_t isr, uint8_t flags, uint8_t ist) {
@@ -85,6 +85,10 @@ void idt_set_descriptor(uint8_t entry, uint64_t isr, uint8_t flags, uint8_t ist)
 	defined in exception_handler.asm
 */
 extern uintptr_t isr_stub_table[32];
+extern const void keyboard_handler_stub;
+extern const void timer_handler_stub;
+extern const void apic_error_handler_stub;
+extern const void spurious_handler_stub;
 
 void int_init(void) {
 	/*
@@ -110,10 +114,10 @@ void int_init(void) {
 		}
 	}
 
-	idt_set_descriptor(32, (uintptr_t)&timer_handler, 0x8e, 0);
-	idt_set_descriptor(33, (uintptr_t)&keyboard_handler, 0x8e, 0);
-	idt_set_descriptor(34, (uintptr_t)&apic_error_handler, 0x8e, 0);
-	idt_set_descriptor(0xff, (uintptr_t)&spurious_handler, 0x8e, 0);
+	idt_set_descriptor(32, (uintptr_t)&timer_handler_stub, 0x8e, 0);
+	idt_set_descriptor(33, (uintptr_t)&keyboard_handler_stub, 0x8e, 0);
+	idt_set_descriptor(34, (uintptr_t)&apic_error_handler_stub, 0x8e, 0);
+	idt_set_descriptor(0xff, (uintptr_t)&spurious_handler_stub, 0x8e, 0);
 
 	asm volatile("lidt %0" : : "m"(idtr_val) : "memory");
 }
