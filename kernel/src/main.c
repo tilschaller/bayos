@@ -26,7 +26,12 @@ void _start(uint64_t memory_map, uint64_t video_info) {
         heap_init();
 
 	acpi_init();
-        
-        printf("Reached end of kernel code\n");
+
+	enable_interrupts();
+
+	while (1) {
+		asm volatile("hlt");
+	}
+
         hcf();
 }
