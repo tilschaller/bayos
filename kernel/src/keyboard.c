@@ -7,10 +7,10 @@ uint8_t shift = 0;
 char scancode_to_char(uint8_t scancode) {
 	switch(scancode) {
 		// SHIFT keys
-        	case 0x2A: shift = true; return 0;   // Left Shift press
-        	case 0x36: shift = true; return 0;   // Right Shift press
-        	case 0xAA: shift = false; return 0;  // Left Shift release
-        	case 0xB6: shift = false; return 0;  // Right Shift release
+        	case 0x2A: shift = 1; return 0;   // Left Shift press
+        	case 0x36: shift = 1; return 0;   // Right Shift press
+        	case 0xAA: shift = 0; return 0;  // Left Shift release
+        	case 0xB6: shift = 0; return 0;  // Right Shift release
 
         	// Number row
         	case 0x02: return shift ? '!' : '1';
