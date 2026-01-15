@@ -36,7 +36,22 @@ void sched_init(void) {
 }
 
 void add_process(void (*f)(void)) {
-
+	process_t *p = alloc(sizeof(process_t));
+	p->next = NULL;
+	p->status = RUNNING;
+	cpu_status_t *ctx = alloc(0x1000);
+	memset(ctx, 0, sizeof(*ctx));
+	ctx->iret_rip = (uintptr_t)f;
+	ctx->iret_cs = 0x8;
+	ctx->iret_flags = get_rflags();
+	ctx->iret_rsp = (uintptr_t)((uint8_t*)ctx + 0x1000);
+	ctx->iret_ss = 0x10;
+	p->context = ctx;
+	process_t *last = process_list;
+	while (last->next != NULL) {
+		last = last->next;
+	}
+	last->next = p;
 }
 void delete_process(void) {}
 
