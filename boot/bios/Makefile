@@ -58,4 +58,4 @@ clean:
 
 .PHONY: install
 install: boot
-	cp boot ../img
+	cp boot ../../img

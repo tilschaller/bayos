@@ -1,7 +1,7 @@
 .PHONY: img
 img:
 	mkdir -p img
-	$(MAKE) -C boot install
+	$(MAKE) -C boot/bios install
 	$(MAKE) -C kernel install
 	truncate -s 65536 img/boot
 	cat img/boot img/kernel > img/bayos-img
@@ -14,5 +14,5 @@ run: img
 .PHONY: clean
 clean:
 	rm -rf img
-	$(MAKE) -C boot clean
+	$(MAKE) -C boot/bios clean
 	$(MAKE) -C kernel clean
