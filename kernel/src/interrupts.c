@@ -58,7 +58,7 @@ cpu_status_t *timer_handler(cpu_status_t *old_context) {
 	cpu_status_t *new_context = schedule(old_context);
 
 	send_eoi();
-
+	
 	return new_context;
 }
 

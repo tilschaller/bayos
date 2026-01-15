@@ -10,9 +10,12 @@
 #include <scheduler.h>
 
 void wait(void) {
+	printf("Second process\n");
 	while (1) {
 		asm volatile("hlt");
 	}
+
+	__builtin_unreachable();
 }
 
 __attribute__((noreturn))
@@ -37,6 +40,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 	sched_init();
 
 	enable_interrupts();
+
+	add_process(wait);
 
 	while (1) {
 		asm volatile("hlt");
