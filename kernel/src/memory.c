@@ -57,6 +57,7 @@ returns the physical address of an unused 4KB page
 */
 uintptr_t allocate_frame(void) {
         start:
+        (void)0;
 	memory_map_entry *r = &f_allocator.memory_map->memory_map[f_allocator.region];
         f_allocator.offset += 0x1000;
         if (r->length >= f_allocator.offset) {

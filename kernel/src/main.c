@@ -41,7 +41,7 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
 	enable_interrupts();
 
-	add_process(wait);
+	// add_process(wait);
 
 	while (1) {
 		asm volatile("hlt");
