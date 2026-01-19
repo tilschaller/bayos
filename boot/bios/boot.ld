@@ -23,4 +23,5 @@ SECTIONS {
     		*(.bootloader32var)
 	} > bootloader
 	_size_of_bootloader = SIZEOF(.bootloader);
+	/DISCARD/ : { *(*) }
 }

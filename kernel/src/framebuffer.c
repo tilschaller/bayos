@@ -143,6 +143,7 @@ int32_t putchar(int32_t c) {
 		htab();
 		break;
 	default:
+		(void)0;
 		uint64_t new_xpos = stdout.x_pos + CHAR_RASTER_WIDTH;
 		if (new_xpos >= width()) {
 			newline();

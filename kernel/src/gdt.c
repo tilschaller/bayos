@@ -111,5 +111,5 @@ void gdt_init(void) {
         /*
                 load tss
         */
-        asm volatile("ltr %0" : : "r"(0x28) : );
+        asm volatile("ltr %0" : : "r"((uint16_t)0x28) : );
 }
