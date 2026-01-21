@@ -19,31 +19,12 @@ _bootloader:
 	mov al, '2'
 	call _print_char
 
-	; disable nmi
-	in al, 0x70
-	or al, 0x80
-	out 0x70, al
-
-	; enabling a20 with int 15h
-	mov ax, 0x2403
-	int 0x15
-	jb _halt_and_catch_fire
-	cmp ah, 0
-	jnz _halt_and_catch_fire
-
-	mov ax, 0x2402
-	int 0x15
-	jb _halt_and_catch_fire
-	cmp ah, 0
-	jnz _halt_and_catch_fire
-	cmp al, 1
-	jz __a20_activated
-
-	mov ax, 0x2401
-	int 0x15
-	jb _halt_and_catch_fire
-	cmp ah, 0
-	jnz _halt_and_catch_fire
+	in al, 0x92
+	test al, 2
+	jnz __a20_activated
+	or al, 2
+	and al, 0xfe
+	out 0x92, al
 
 __a20_activated:
 	; print confirmation that a20 is activated

@@ -86,6 +86,16 @@ __num_segments:
 	dd 1 		; lower lba of disk
 	dd 0 		; higher lba of disk
 
+SECTION .part_table
+_part_table:
+	db 0x80
+	db 0x00, 0x02, 0x00
+	db 0x0c
+	db 0x00, 0x20, 0x3f
+	dd 0x1
+	dd 0xffffff
+	times 16 * 3 db 0
+
 SECTION .magic_bytes
 _magic_bytes:
 	db 0x55
