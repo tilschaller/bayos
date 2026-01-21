@@ -39,6 +39,11 @@ typedef struct {
 typedef struct {
 	acpi_header header;
 	uint32_t pointer[];
+} __attribute__((packed)) rsdt;
+
+typedef struct {
+	acpi_header header;
+	uint32_t pointer[];
 } __attribute__((packed)) xsdt;
 
 typedef struct {
@@ -56,6 +61,61 @@ typedef struct {
 	uint32_t addr;
 	uint32_t global_system_interrupt_base;
 } __attribute__((packed)) madt_entry_io_apic;
+
+madt *init_acpi_1(xsdp *rsdp) {
+	rsdt *rsdt = phys_to_virt(rsdp->rsdt_addr);
+	if (rsdp->rsdt_addr == 0 || rsdt == NULL || memcmp(rsdt->header.signature, "RSDT", 4) != 0) {
+		printf("Could not find rsdt\n");
+		hcf();
+	}
+
+	madt *madt;
+	for (int i = 0; i < (int)((rsdt->header.length - sizeof(acpi_header)) / 4); i++) {
+		acpi_header *header = phys_to_virt(rsdt->pointer[i]);
+		if (header == NULL) continue;
+		int res = memcmp(header->signature, "APIC", 4);
+		if (res == 0) {
+			madt = (void*)header;
+			break;
+		}
+	}
+	if (madt == NULL) {
+		printf("Could not find madt\n");
+		hcf();
+	}
+
+	lapic = phys_to_virt(madt->lapic_addr);
+
+	return madt;
+}
+
+madt* init_acpi_2(xsdp *xsdp) {
+	xsdt *xsdt = phys_to_virt(xsdp->xsdt_addr);
+	if (xsdp->xsdt_addr == 0 || xsdt == NULL || memcmp(xsdt->header.signature, "XSDT", 4) != 0) {
+		printf("Could not find xsdt\n");
+		hcf();
+	}
+
+	madt *madt;
+
+	for (int i = 0; i < (int)((xsdt->header.length - sizeof(acpi_header)) / 8); i++) {
+		acpi_header *header = phys_to_virt(xsdt->pointer[i]);
+		if (header == NULL) continue;
+		int res = memcmp(header->signature, "APIC", 4);
+		if (res == 0) {
+			madt = (void*)header;
+			break;
+		}
+	}
+	if (madt == NULL) {
+		printf("Could not find madt\n");
+		hcf();
+	}
+
+	lapic = phys_to_virt(madt->lapic_addr);
+
+	return madt;
+}
 
 void acpi_init(void) {
 	// first disale the legacy pic
@@ -81,46 +141,25 @@ void acpi_init(void) {
 	// find the rsdp in bios area
 	// 0xe0000 - 0xfffff
 	// just hope no gargabe memory has signature
-	xsdp *xsdp = 0;
+	xsdp *rsdp = 0;
 	for (uintptr_t i = 0xe0000; i <= 0xfffff; i += 16) {
 		int res = memcmp(phys_to_virt(i), "RSD PTR ", 8);
 		if (res == 0) {
-			xsdp = phys_to_virt(i);
+			rsdp = phys_to_virt(i);
 			break;
 		}
 	}
-	if (xsdp == NULL) {
+	if (rsdp == NULL) {
 		printf("Could not find rsdp\n");
 		hcf();
 	}
 
-	if (xsdp->revision != 0) {
-		printf("ACPI version not supported\n");
-		hcf();
+	madt *madt = NULL;
+	if (rsdp->revision == 0) {
+		madt = init_acpi_1(rsdp);
+	} else {
+		madt = init_acpi_2(rsdp);
 	}
-
-	xsdt *rsdt = phys_to_virt(xsdp->rsdt_addr);
-	if (xsdp->rsdt_addr == 0 || rsdt == NULL || memcmp(rsdt->header.signature, "RSDT", 4) != 0) {
-		printf("Could not find rsdt\n");
-		hcf();
-	}
-
-	madt *madt;
-	for (int i = 0; i < (int)((rsdt->header.length - sizeof(acpi_header)) / 4); i++) {
-		acpi_header *header = phys_to_virt(rsdt->pointer[i]);
-		if (header == NULL) continue;
-		int res = memcmp(header->signature, "APIC", 4);
-		if (res == 0) {
-			madt = (void*)header;
-			break;
-		}
-	}
-	if (madt == NULL) {
-		printf("Could not find madt\n");
-		hcf();
-	}
-
-	lapic = phys_to_virt(madt->lapic_addr);
 
 	if (lapic == 0) {
 		printf("Could not find lapic\n");
