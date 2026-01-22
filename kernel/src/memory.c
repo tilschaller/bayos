@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <fail.h>
 #include <string.h>
+#include <lock.h>
 
 void *phys_to_virt(uint64_t phys) {
         /*
@@ -45,17 +46,21 @@ frame_allocator f_allocator;
 static uint64_t next_region(void) {
         for (uint32_t i = f_allocator.region + 1; i < f_allocator.memory_map->num_of_entries; i++) {
                 if (f_allocator.memory_map->memory_map[i].type == 1 &&
-                    f_allocator.memory_map->memory_map[i].length >= 0x1000) {
+        f_allocator.memory_map->memory_map[i].length >= 0x1000) {
                         return i;
                 }
         }
         return 0;
 }
 
+spinlock_t map_to_lock;
+spinlock_t allocate_frame_lock;
+
 /*
 returns the physical address of an unused 4KB page
 */
 uintptr_t allocate_frame(void) {
+	acquire(&allocate_frame_lock);
         start:
         (void)0;
 	memory_map_entry *r = &f_allocator.memory_map->memory_map[f_allocator.region];
@@ -65,12 +70,14 @@ uintptr_t allocate_frame(void) {
                 if (return_addr < 0x400000) {
                         goto start;
                 } else {
+			release(&allocate_frame_lock);
                         return return_addr; 
 
                 }
         } else {
                 uint64_t region = next_region();
                 if (region == 0) {
+			release(&allocate_frame_lock);
                         return 0;
                 } else {
                         f_allocator.region = region;
@@ -78,6 +85,8 @@ uintptr_t allocate_frame(void) {
                         goto start;
                 }
         }
+
+	release(&allocate_frame_lock);
 }
 
 
@@ -87,11 +96,15 @@ typedef struct {
 
 memory_mapper mapper;
 
+spinlock_t map_to_lock;
+spinlock_t allocate_frame_lock;
+
 /*
 maps a 4KB phyiscal page to virt address
 flags is unused
 */
 void map_to(uintptr_t phys, uintptr_t virt, int flags) {
+	acquire(&map_to_lock);
         (void)flags; 
 
         size_t level_4_entry = (virt >> 39) & 0x1ff;
@@ -123,7 +136,7 @@ void map_to(uintptr_t phys, uintptr_t virt, int flags) {
         level_1[level_1_entry] = phys | 3;
 
         asm volatile("invlpg (%0)" :: "r"(virt) : "memory");
-
+	release(&map_to_lock);
 }
 
 void mem_init(void *mm) {
@@ -138,7 +151,6 @@ void mem_init(void *mm) {
         in pml4
         */
         mapper.pml4 = phys_to_virt(pml4 & ~0xfff);
-        uint64_t *pdpt_low = phys_to_virt(mapper.pml4[0] & 0xfff);
         /*
         pdpt_low is 0x1000 bytes long and can be used for other things
 	for example to map the kernel heap

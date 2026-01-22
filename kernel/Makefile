@@ -37,7 +37,8 @@ C_SRCS = \
 	src/acpi.c \
 	src/ports.c \
 	src/keyboard.c \
-	src/scheduler.c
+	src/scheduler.c \
+	src/lock.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))

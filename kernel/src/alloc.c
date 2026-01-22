@@ -1,6 +1,7 @@
 #include <alloc.h>
 #include <types/types.h>
 #include <memory.h>
+#include <lock.h>
 
 #define USED 1
 #define FREE 0
@@ -14,7 +15,12 @@ typedef struct heap_node {
 
 heap_node *heap_start = (heap_node*)HEAP_ADDRESS;
 
+spinlock_t alloc_lock;
+spinlock_t free_lock;
+
 void *alloc(size_t size) {
+	acquire(&alloc_lock);
+
 	if (size < 0x20) {
 		size = 0x20;
 	}
@@ -24,6 +30,7 @@ void *alloc(size_t size) {
 	while (cur_node != NULL) {
 		if (cur_node->size == size && cur_node->status == FREE) {
 			cur_node->status = USED;
+			release(&alloc_lock);
 			return (void*)(cur_node + 1);
 		}
 		if (cur_node->size >= (size + sizeof(heap_node) + 0x20) && cur_node->status == FREE) {
@@ -38,10 +45,14 @@ void *alloc(size_t size) {
 			cur_node->next = new_node;
 			cur_node->status = USED;
 			cur_node->size = size;
+			release(&alloc_lock);
 			return (void*)(cur_node + 1);
 		}
 		cur_node = cur_node->next;
 	}
+	
+	release(&alloc_lock);
+
 	return 0;
 }
 
@@ -50,6 +61,7 @@ void free(void *ptr) {
 	if ((uintptr_t)ptr < HEAP_ADDRESS || (uintptr_t)ptr >= HEAP_ADDRESS + HEAP_LENGTH) return;
 	heap_node *node = (heap_node*)((uint8_t*)ptr - sizeof(heap_node));
 	if (node->status == FREE) return;
+	acquire(&free_lock);
 	node->status = FREE;
 	heap_node *prev = node->prev;
 	heap_node *next = node->next;
@@ -68,6 +80,8 @@ void free(void *ptr) {
 			node->next->prev = node;
 		}
 	}
+
+	release(&free_lock);
 }
 
 void heap_init() {

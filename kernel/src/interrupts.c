@@ -122,6 +122,8 @@ void int_init(void) {
 	asm volatile("lidt %0" : : "m"(idtr_val) : "memory");
 }
 
+int int_enabled  = 0;
 inline void enable_interrupts(void) {
+	int_enabled = 1;
 	asm volatile("sti");
 }
