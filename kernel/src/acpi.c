@@ -62,6 +62,15 @@ typedef struct {
 	uint32_t global_system_interrupt_base;
 } __attribute__((packed)) madt_entry_io_apic;
 
+typedef struct {
+	uint8_t type; // is 2
+	uint8_t length; 
+	uint8_t bus;
+	uint8_t irq;
+	uint32_t gsi;
+	uint16_t flags;
+} __attribute__((packed)) madt_entry_iso;
+
 madt *init_acpi_1(xsdp *rsdp) {
 	rsdt *rsdt = phys_to_virt(rsdp->rsdt_addr);
 	if (rsdp->rsdt_addr == 0 || rsdt == NULL || memcmp(rsdt->header.signature, "RSDT", 4) != 0) {
@@ -210,6 +219,19 @@ void acpi_init(void) {
 
 	uint32_t lapic_id = lapic[8];
 
+	uint32_t kbd_gsi = 1, kbd_flags = 0;
+	for (void *addr = (void*)madt + 0x2c; addr < (void*)madt + madt->header.length;) {
+		madt_entry_iso *iso = (madt_entry_iso*)addr;
+
+		if (iso->type == 2) {
+			if (iso->bus == 0 && iso->irq == 1) {
+				kbd_gsi = iso->gsi;
+				kbd_flags = iso->flags;
+			}
+		}
+		addr += iso->length;
+	}
+
 	// configure io_apic
 	// first find all io apics
 	for (void *addr = (void*)madt + 0x2c; addr < (void*)madt + madt->header.length;) {
@@ -218,23 +240,27 @@ void acpi_init(void) {
 			volatile uint16_t *ioregsel = phys_to_virt(io_apic->addr);
 			volatile uint32_t *ioregwin = phys_to_virt(io_apic->addr + 16);
 
-			*ioregsel = 1;
-			uint8_t num_of_irqs = ((*ioregwin >> 16) & 0xff) - 1;
+			if (kbd_gsi < io_apic->global_system_interrupt_base)
+				goto next;
 
-			for (uint16_t i = 0; i < num_of_irqs; i++) {
-				*ioregsel = 0x10 + i * 2;
-				*ioregwin = 1 << 16;
-				*ioregsel = 0x11 + i * 2;
-				*ioregwin = 0;
-			}
+			uint32_t pin = kbd_gsi - io_apic->global_system_interrupt_base;
 
-			if (io_apic->global_system_interrupt_base == 0) {
-				*ioregsel = 0x12;
-				*ioregwin = 33;
-				*ioregsel = 0x13;
-				*ioregwin = lapic_id << 24;
-			}
+			uint32_t lo = 33;
+			uint32_t hi = lapic_id << 24;
+
+			if ((kbd_flags & 0x3) == 0x3) 
+				lo |= (1 << 13);
+
+			if ((kbd_flags & 0xc) == 0xc)
+				lo |= (1 << 15);
+
+			*ioregsel = 0x10 + pin * 2;
+			*ioregwin = lo;
+
+			*ioregsel = 0x11 + pin * 2;
+			*ioregwin = hi;
 		}
+		next:
 		addr += io_apic->length;
 	} 
 }

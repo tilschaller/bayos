@@ -2,13 +2,13 @@
 #include <string.h>
 #include <types/types.h>
 #include <memory.h>
+#include <lock.h>
 /*
 this is automatically set to the first framebuffer created,
 but can be overwritten manually
 all calls to putchar use this framebuffer
-TODO:
-	we need a lock around this
 */
+spinlock_t lock;
 framebuffer stdout = {0};
 
 /*
@@ -129,6 +129,7 @@ static void write_char(unsigned char c, uint32_t color) {
 }
 
 int32_t putchar(int32_t c) {
+	acquire(&lock);
 	switch (c) {
 	case '\n':
 		newline();
@@ -154,6 +155,8 @@ int32_t putchar(int32_t c) {
 		}
 		write_char((char)c, 0xffffff);
 	}
+
+	release(&lock);
 
 	return 0;
 }
