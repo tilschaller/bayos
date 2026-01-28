@@ -45,6 +45,8 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
 	add_process(wait);
 
+	asm volatile("int $0x80");
+
 	while (1) {
 		asm volatile("hlt");
 	}
