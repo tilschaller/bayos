@@ -94,11 +94,13 @@ extern timer_handler
 extern spurious_handler
 extern apic_error_handler
 extern keyboard_handler
+extern syscall_handler
 
 global timer_handler_stub
 global spurious_handler_stub
 global apic_error_handler_stub
 global keyboard_handler_stub
+global syscall_handler_stub
 
 timer_handler_stub:
 	pushaq
@@ -123,5 +125,11 @@ keyboard_handler_stub:
 	pushaq
 	mov rdi, rsp
 	call keyboard_handler
+	popaq
+	iretq
+syscall_handler_stub:
+	pushaq
+	mov rdi, rsp
+	call syscall_handler
 	popaq
 	iretq
