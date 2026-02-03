@@ -15,8 +15,8 @@ typedef struct heap_node {
 
 heap_node *heap_start = (heap_node*)HEAP_ADDRESS;
 
-spinlock_t alloc_lock;
-spinlock_t free_lock;
+spinlock_t alloc_lock = {0};
+spinlock_t free_lock = {0};
 
 void *alloc(size_t size) {
 	acquire(&alloc_lock);
