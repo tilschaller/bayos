@@ -130,6 +130,7 @@ static void write_char(unsigned char c, uint32_t color) {
 
 int32_t putchar(int32_t c) {
 	acquire(&lock);
+
 	switch (c) {
 	case '\n':
 		newline();
@@ -166,4 +167,5 @@ void fb_init(video_mode_info *info) {
 	stdout.x_pos = BORDER_PADDING;
 	stdout.y_pos = BORDER_PADDING;
 	stdout.fb = phys_to_virt((uint64_t)info->phys_address);
+	memset(stdout.fb, 0, info->width * info->height / (info->bpp / 8));	
 }

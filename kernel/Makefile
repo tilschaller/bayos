@@ -61,4 +61,4 @@ clean:
 
 .PHONY: install
 install: kernel
-	cp kernel ../img
+	cp kernel ../iso

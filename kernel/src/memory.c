@@ -53,8 +53,8 @@ static uint64_t next_region(void) {
         return 0;
 }
 
-spinlock_t map_to_lock;
-spinlock_t allocate_frame_lock;
+spinlock_t map_to_lock = {0};
+spinlock_t allocate_frame_lock = {0};
 
 /*
 returns the physical address of an unused 4KB page
@@ -95,9 +95,6 @@ typedef struct {
 } memory_mapper;
 
 memory_mapper mapper;
-
-spinlock_t map_to_lock;
-spinlock_t allocate_frame_lock;
 
 /*
 maps a 4KB phyiscal page to virt address
@@ -162,6 +159,9 @@ void mem_init(void *mm) {
 	/*
 	 * init the frame allocator
 	*/
+
+	release(&map_to_lock);
+	release(&allocate_frame_lock);
 
 	f_allocator.memory_map = memory_map;
         f_allocator.offset = 0xfffffffffff;

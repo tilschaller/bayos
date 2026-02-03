@@ -20,9 +20,9 @@ void wait(void) {
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
-
-        video_mode_info *vinfo = phys_to_virt(video_info);
-        fb_init(vinfo);
+        fb_init(
+		phys_to_virt(video_info)
+	);
 
         printf("#########################\n");
         printf("#    Welcome to Bayos   #\n");

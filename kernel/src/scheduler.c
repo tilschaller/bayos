@@ -24,8 +24,8 @@ void sched_init(void) {
 	current_process = p;
 }
 
-spinlock_t add_lock;
-spinlock_t del_lock;
+spinlock_t add_lock = {0};
+spinlock_t del_lock = {0};
 
 void add_process(void (*f)(void)) {
 	acquire(&add_lock);

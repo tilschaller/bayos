@@ -1,18 +1,22 @@
-.PHONY: img
-img:
-	mkdir -p img
+.PHONY: iso
+iso:
+	mkdir -p iso
 	$(MAKE) -C boot/bios install
 	$(MAKE) -C kernel install
-	truncate -s 65536 img/boot
-	cat img/boot img/kernel > img/bayos-img
-	truncate -s %512 img/bayos-img
+	mkisofs \
+		-b boot.bin \
+		-no-emul-boot \
+		-boot-info-table \
+		-o bayos.iso \
+		iso/
 
 .PHONY: run
-run: img
-	qemu-system-x86_64 -drive file=img/bayos-img,format=raw -monitor stdio -m 4G
+run: iso
+	qemu-system-x86_64 -cdrom bayos.iso -monitor stdio -m 4G
 
 .PHONY: clean
 clean:
-	rm -rf img
+	rm -rf iso/
+	rm -f bayos.iso
 	$(MAKE) -C boot/bios clean
 	$(MAKE) -C kernel clean
