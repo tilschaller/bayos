@@ -273,7 +273,7 @@ __found_kernel:
 
 	; filesize of program header
 	mov ecx, [eax + 32]
-	shr ecx, 9
+	shr ecx, 11
 	inc ecx
 
 	mov ebx, [eax + 8]
@@ -416,7 +416,7 @@ _protected_mode:
 	; copy program header of kernel
 	; to 2mb
 	pop ecx
-	shl ecx, 9
+	shl ecx, 11
 	mov esi, 0x10000
 	mov edi, 0x200000
 
