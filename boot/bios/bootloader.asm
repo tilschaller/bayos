@@ -269,7 +269,7 @@ __found_kernel:
 	mov ebx, [eax + 32]
 	add eax, ebx
 
-	mov [__default_dap_size], 1
+	mov word [__default_dap_size], 1
 
 	; filesize of program header
 	mov ecx, [eax + 32]
