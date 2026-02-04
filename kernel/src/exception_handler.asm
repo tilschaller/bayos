@@ -128,8 +128,24 @@ keyboard_handler_stub:
 	popaq
 	iretq
 syscall_handler_stub:
+	; input: 3 registers
+	;	rax: contains syscall number
+	;	rbx: first argument
+	;	rcx: second argument
+	; store all registers
+	; TODO: look into only preserving the registers
+	; restored via system v abi and discard scratch registers
 	pushaq
+	; arguments for syscall_handler
+	; 4 uint64_t
+	;	1: pointer to stack containing iretq frame
+	;	2: first argument from syscall
+	;	3: second argument from syscall
+	;	4: third argument from syscall
 	mov rdi, rsp
+	mov rsi, rax
+	mov rdx, rbx
+	; mov rcx, rcx rcx is already right
 	call syscall_handler
 	popaq
 	iretq

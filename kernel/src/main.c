@@ -18,6 +18,9 @@ void wait(void) {
 	__builtin_unreachable();
 }
 
+
+	char *msg = "Hello from syscall\n";
+
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
         fb_init(
@@ -45,6 +48,10 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
 	add_process(wait);
 
+	// do a write syscall
+	asm volatile("mov %0, %%rbx" : : "r"(msg));
+	asm volatile("mov $19, %rcx");
+	asm volatile("mov $4, %rax");
 	asm volatile("int $0x80");
 
 	while (1) {
