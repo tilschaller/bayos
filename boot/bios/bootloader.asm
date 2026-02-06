@@ -316,7 +316,7 @@ __copy_ph:
 
 	mov al, 'p'
 	call _print_char
-
+	
 	; enter protected mode
 	lgdt [_gdt_pro_poi]
 	mov eax, cr0
