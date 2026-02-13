@@ -49,7 +49,7 @@ void *alloc(size_t size) {
 		}
 		cur_node = cur_node->next;
 	}
-	
+
 	release(&heap_lock);
 
 	return 0;

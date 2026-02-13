@@ -1,6 +1,6 @@
 /* kernel/core/types/types.h contains typedefs for datatype in thr form of
  * [signed/unsigned][type][bits]_t
- * 
+ *
  */
 
 #include <stdarg.h>
@@ -20,7 +20,7 @@ typedef unsigned int            uint32_t;
 typedef signed long long int    int64_t;
 typedef unsigned long long int  uint64_t;
 
-/*Note: when subtracting two pointers on 64bit, the difference should not be 
+/*Note: when subtracting two pointers on 64bit, the difference should not be
  * in range of int64_t*/
 typedef signed long long int    ptrdiff_t;
 typedef unsigned long long int  uintptr_t;

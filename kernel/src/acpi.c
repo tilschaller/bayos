@@ -64,7 +64,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t type; // is 2
-	uint8_t length; 
+	uint8_t length;
 	uint8_t bus;
 	uint8_t irq;
 	uint32_t gsi;
@@ -140,7 +140,7 @@ void acpi_init(void) {
 
 	write_port_u8(PIC_1_DAT_PORT, 0x4);
 	write_port_u8(PIC_2_DAT_PORT, 0x2);
-	
+
 	write_port_u8(PIC_1_DAT_PORT, 0x1);
 	write_port_u8(PIC_2_DAT_PORT, 0x1);
 
@@ -174,7 +174,7 @@ void acpi_init(void) {
 		printf("Could not find lapic\n");
 		hcf();
 	}
-	
+
 	// init lapic to well known state
 	lapic[56] = 0xffffffff;
 	lapic[52] = (lapic[52] & 0xffffff) | 1;
@@ -185,7 +185,7 @@ void acpi_init(void) {
 	lapic[32] = 0;
 
 	// set lapic internal error vector
-	lapic[220] = 34 | 0x100; 
+	lapic[220] = 34 | 0x100;
 	// set spurious interrupt vector
 	lapic[60] = 0xff | 0x100;
 
@@ -248,7 +248,7 @@ void acpi_init(void) {
 			uint32_t lo = 33;
 			uint32_t hi = lapic_id << 24;
 
-			if ((kbd_flags & 0x3) == 0x3) 
+			if ((kbd_flags & 0x3) == 0x3)
 				lo |= (1 << 13);
 
 			if ((kbd_flags & 0xc) == 0xc)
@@ -260,7 +260,7 @@ void acpi_init(void) {
 			*ioregsel = 0x11 + pin * 2;
 			*ioregwin = hi;
 		}
-		next:
+next:
 		addr += io_apic->length;
-	} 
+	}
 }

@@ -26,7 +26,7 @@ char *dec_to_oct(uint64_t in) {
 	oct[0] = '0';
 	for(int i = 1; i < 23; i++) oct[i] = '0';
 	oct[23] = '\0';
-	
+
 	int i = 22;
 
 	for(; (i >= 1) && (in > 0); i--) {

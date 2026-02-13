@@ -29,10 +29,11 @@ static spinlock_t lock;
 int read_cdrom(uint16_t port, bool slave, uint32_t lba, uint32_t sectors, uint16_t *buffer) {
 	acquire(&lock);
 	int ret;
-	volatile uint8_t read_cmd[12] = { 0xA8, 0, 
-					  (lba >> 0x18) & 0xff, (lba >> 0x10) & 0xff, (lba >> 0x8) & 0xff, (lba >> 0x0) & 0xff,
-					  (sectors >> 0x18) & 0xff, (sectors >> 0x10) & 0xff, (sectors >> 0x8) & 0xff, (sectors >> 0x0) & 0xff,
-					  0, 0 };
+	volatile uint8_t read_cmd[12] = { 0xA8, 0,
+	                                  (lba >> 0x18) & 0xff, (lba >> 0x10) & 0xff, (lba >> 0x8) & 0xff, (lba >> 0x0) & 0xff,
+	                                  (sectors >> 0x18) & 0xff, (sectors >> 0x10) & 0xff, (sectors >> 0x8) & 0xff, (sectors >> 0x0) & 0xff,
+	                                  0, 0
+	                                };
 	write_port_u8(port + DRIVE_SELECT, 0xa0 & (slave << 4));
 	ata_io_wait(port);
 	write_port_u8(port + ERROR_R, 0x0);
@@ -69,9 +70,9 @@ int read_cdrom(uint16_t port, bool slave, uint32_t lba, uint32_t sectors, uint16
 
 		insw(port + DATA, (uint16_t *)((uint8_t*)buffer + i * 0x800), size / 2);
 	}
-	
+
 	ret = 0;
-	end:
+end:
 	release(&lock);
 	return ret;
 }

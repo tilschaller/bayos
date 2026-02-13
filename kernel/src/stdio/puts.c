@@ -11,8 +11,8 @@ int32_t putstr(const char *s) {
 
 int32_t puts(const char *s) {
 	int32_t char_cnt = putstr(s);
-	
+
 	putchar('\n');
-	
+
 	return char_cnt + 1;
 }
