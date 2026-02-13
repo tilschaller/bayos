@@ -22,7 +22,7 @@ extern char _binary_zap_vga16_psf_end;
 typedef struct {
 	uint16_t magic;
 	uint8_t fontMode;
-    	uint8_t characterSize;
+	uint8_t characterSize;
 } PSF1_Header;
 
 /*
@@ -93,7 +93,7 @@ static void write_pixel(uint64_t x, uint64_t y, uint32_t color) {
 
 static void backspace() {
 	/* if (for whatever reason) the current cursor position is smaller then a
-	 * single-character width, it should be set to the border. Also if the 
+	 * single-character width, it should be set to the border. Also if the
 	 * current position is at the 0, it is undefined in C99 standard, so we will
 	 * handle it to set x_pos at the border*/
 	if(stdout.x_pos < (CHAR_RASTER_WIDTH + BORDER_PADDING)) {
@@ -103,18 +103,18 @@ static void backspace() {
 	}
 
 	for(int i = 0; i < CHAR_RASTER_HEIGHT; i++) {
-			for(int j = 0; j < CHAR_RASTER_WIDTH; j++) {
-				write_pixel(stdout.x_pos + j, stdout.y_pos + i, 0x000000);
-			}
+		for(int j = 0; j < CHAR_RASTER_WIDTH; j++) {
+			write_pixel(stdout.x_pos + j, stdout.y_pos + i, 0x000000);
+		}
 	}
 }
 
 static void write_char(unsigned char c, uint32_t color) {
 	int bytes_per_glyph = (CHAR_RASTER_WIDTH * CHAR_RASTER_HEIGHT) / 8;
 
-	uint8_t *glyph = (uint8_t*)&_binary_zap_vga16_psf_start + 
-		sizeof(PSF1_Header) + 
-		c * bytes_per_glyph;
+	uint8_t *glyph = (uint8_t*)&_binary_zap_vga16_psf_start +
+	                 sizeof(PSF1_Header) +
+	                 c * bytes_per_glyph;
 
 	for (int y = 0; y < CHAR_RASTER_HEIGHT; y++) {
 		uint8_t pixel_row = glyph[y];

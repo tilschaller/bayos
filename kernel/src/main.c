@@ -41,25 +41,25 @@ typedef struct {
 
 __attribute__((noreturn))
 void _start(uint64_t memory_map, uint64_t video_info) {
-        fb_init(
-		phys_to_virt(video_info)
+	fb_init(
+	        phys_to_virt(video_info)
 	);
 
-        printf("#########################\n");
-        printf("#    Welcome to Bayos   #\n");
-        printf("#########################\n");
+	printf("#########################\n");
+	printf("#    Welcome to Bayos   #\n");
+	printf("#########################\n");
 
-        gdt_init();
-        int_init();
+	gdt_init();
+	int_init();
 
-        mem_init(
-                phys_to_virt(memory_map)
-        );
+	mem_init(
+	        phys_to_virt(memory_map)
+	);
 
-        heap_init();
+	heap_init();
 
 	acpi_init();
-	
+
 	sched_init();
 
 	enable_interrupts();
@@ -120,11 +120,11 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 	}
 
 	add_user_process(shell->e_entry);
-	free(shell); 
+	free(shell);
 
 	while (1) {
 		asm volatile("hlt");
 	}
 
-        __builtin_unreachable();
+	__builtin_unreachable();
 }

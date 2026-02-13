@@ -1,0 +1,6 @@
+# minimal astyle config
+# run 'astyle --project **/*.c **/*.h' to format your code before commiting
+
+--style=google
+--indent=tab=8
+-n

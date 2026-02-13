@@ -59,7 +59,7 @@ cpu_status_t *timer_handler(cpu_status_t *old_context) {
 	cpu_status_t *new_context = schedule(old_context);
 
 	send_eoi();
-	
+
 	return new_context;
 }
 
@@ -82,8 +82,8 @@ void syscall_handler(cpu_status_t *context, uint64_t arg_1, uint64_t arg_2, uint
 		}
 	} else if (arg_1 == 2) { // exit syscall
 		exit();
-	}	
-}	
+	}
+}
 
 void idt_set_descriptor(uint8_t entry, uint64_t isr, uint8_t flags, uint8_t ist) {
 	idt[entry].isr_low = isr & 0xffff;
@@ -114,7 +114,7 @@ void int_init(void) {
 
 	/*
 		set entries for the first 32 interrupts
-		since they are not user defined but declared by the 
+		since they are not user defined but declared by the
 		manual
 	*/
 	for (uint8_t i = 0; i < 32; i++) {

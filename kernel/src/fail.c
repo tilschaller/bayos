@@ -3,8 +3,8 @@
 
 __attribute__((noreturn))
 void hcf() {
-        printf("Halting core");
-        for (;;) {
-                asm volatile("cli; hlt");
-        }
+	printf("Halting core");
+	for (;;) {
+		asm volatile("cli; hlt");
+	}
 }

@@ -6,7 +6,7 @@
 typedef struct {
 	uint8_t e_ident[16];
 	uint16_t e_type;
-	uint16_t e_machine; 
+	uint16_t e_machine;
 	uint32_t e_version;
 	uint64_t e_entry;
 	uint64_t e_phoff;
