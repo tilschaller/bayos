@@ -21,6 +21,7 @@ void sched_init(void);
 void add_process(void (*f)(void));
 void add_user_process(uintptr_t f);
 void delete_process(process_t * prev, process_t *p);
+void exit(void);
 
 cpu_status_t *schedule(cpu_status_t *context);
 

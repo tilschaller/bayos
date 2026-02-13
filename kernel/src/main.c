@@ -12,11 +12,13 @@
 #include <string.h>
 #include <elf.h>
 
+// test process that prints second process and deletes itself
 void wait(void) {
 	printf("Second process\n");
-	while (1) {
-		asm volatile("hlt");
-	}
+
+	// end process
+	asm volatile("mov $2, %rax");
+	asm volatile("int $0x80");
 
 	__builtin_unreachable();
 }

@@ -75,13 +75,15 @@ void spurious_handler(cpu_status_t *context) {
 
 void syscall_handler(cpu_status_t *context, uint64_t arg_1, uint64_t arg_2, uint64_t arg_3) {
 	(void)context;
-	if (arg_1 == 4) { // write syscall
+	if (arg_1 == 1) { // write syscall
 		char *msg = (char*)arg_2;
 		for (uint64_t i = 0; i < arg_3; i++) {
 			putchar((int)*msg++);
 		}
-	}
-}
+	} else if (arg_1 == 2) { // exit syscall
+		exit();
+	}	
+}	
 
 void idt_set_descriptor(uint8_t entry, uint64_t isr, uint8_t flags, uint8_t ist) {
 	idt[entry].isr_low = isr & 0xffff;
