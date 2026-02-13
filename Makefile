@@ -3,6 +3,7 @@ iso:
 	mkdir -p iso
 	$(MAKE) -C boot/bios install
 	$(MAKE) -C kernel install
+	$(MAKE) -C user install
 	mkisofs \
 		-b boot.bin \
 		-no-emul-boot \
@@ -20,3 +21,4 @@ clean:
 	rm -f bayos.iso
 	$(MAKE) -C boot/bios clean
 	$(MAKE) -C kernel clean
+	$(MAKE) -C user clean

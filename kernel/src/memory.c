@@ -62,7 +62,6 @@ returns the physical address of an unused 4KB page
 uintptr_t allocate_frame(void) {
 	acquire(&allocate_frame_lock);
         start:
-        (void)0;
 	memory_map_entry *r = &f_allocator.memory_map->memory_map[f_allocator.region];
         f_allocator.offset += 0x1000;
         if (r->length >= f_allocator.offset) {
@@ -98,7 +97,6 @@ memory_mapper mapper;
 
 /*
 maps a 4KB phyiscal page to virt address
-flags is unused
 */
 void map_to(uintptr_t phys, uintptr_t virt, int flags) {
 	acquire(&map_to_lock);
@@ -115,22 +113,22 @@ void map_to(uintptr_t phys, uintptr_t virt, int flags) {
         if ((mapper.pml4[level_4_entry] & 1) == 0) {
                 uintptr_t frame = allocate_frame();
                 memset(phys_to_virt(frame), 0, 0x1000);
-                mapper.pml4[level_4_entry] = frame | 3;
+                mapper.pml4[level_4_entry] = frame | flags;
         }
         uint64_t *level_3 = phys_to_virt(mapper.pml4[level_4_entry] & ~(0xfff));
         if ((level_3[level_3_entry] & 1) == 0) {
                 uintptr_t frame = allocate_frame();
                 memset(phys_to_virt(frame), 0, 0x1000);
-                level_3[level_3_entry] = frame | 3;
+                level_3[level_3_entry] = frame | flags;
         }
         uint64_t *level_2 = phys_to_virt(level_3[level_3_entry] & ~(0xfff));
         if ((level_2[level_2_entry] & 1) == 0) {
                 uintptr_t frame = allocate_frame();
                 memset(phys_to_virt(frame), 0, 0x1000);
-                level_2[level_2_entry] = frame | 3;
+                level_2[level_2_entry] = frame | flags;
         }
         uint64_t *level_1 = phys_to_virt(level_2[level_2_entry] & ~(0xfff));
-        level_1[level_1_entry] = phys | 3;
+        level_1[level_1_entry] = phys | flags;
 
         asm volatile("invlpg (%0)" :: "r"(virt) : "memory");
 	release(&map_to_lock);
@@ -187,6 +185,6 @@ void mem_init(void *mm) {
         for (int i = 0; i < HEAP_LENGTH / 0x1000; i++) {
                 uintptr_t frame = allocate_frame();
                 uintptr_t addr = HEAP_ADDRESS + i * 0x1000;
-                map_to(frame, addr, 0);
+                map_to(frame, addr, FLAG_PRESENT | FLAG_WRITEABLE);
         }
 }
