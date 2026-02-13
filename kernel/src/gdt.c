@@ -5,12 +5,14 @@
 #define DOUBLE_FAULT_IST_INDEX 0
 
 uint8_t double_fault_stack[0x1000];
+uint8_t kernel_stack[0x1000];
 
 typedef struct {
-        uint32_t reserved1;
+        uint32_t reserved0;
         // consists of high & low
-        uint32_t rsp[6];
-        uint32_t ist[16];
+        uint64_t rsp[3];
+	uint64_t reserved1;
+        uint64_t ist[7];
         uint64_t reserved2;
         uint16_t reserved3;
         uint16_t iopb;
@@ -38,13 +40,13 @@ typedef struct {
         uint32_t reserved;
 } __attribute__((packed)) gdt_tss_entry;
 
-#define GDT_ENTRY(access_byte)          \
+#define GDT_ENTRY(access_byte, flags)   \
         (gdt_entry) {                   \
                 .limit_low = 0xffff,    \
                 .base_low = 0,          \
                 .base_mid = 0,          \
                 .access = access_byte,  \
-                .granularity = 0xaf,    \
+                .granularity = (flags << 4) | 0xf,   \
                 .base_high = 0,         \
         }
 
@@ -54,7 +56,7 @@ typedef struct {
                 .base_low = (uint16_t)((uint64_t)(addr) & 0xffff),              \
                 .base_mid1 = (uint8_t)(((uint64_t)(addr) >> 16) & 0xff),        \
                 .access = 0x89,                                                 \
-                .granularity = (uint8_t)((sizeof(tss) - 1) >> 16),              \
+                .granularity = 0,				                \
                 .base_mid2 = (uint8_t)(((uint64_t)(addr) >> 24) & 0xff),        \
                 .base_high = (uint32_t)(((uint64_t)(addr) >> 32) & 0xffffffff), \
                 .reserved = 0,                                                  \
@@ -76,16 +78,16 @@ typedef struct {
 } __attribute((packed)) gdtr;
 
 gdt gdt_val = {
-        GDT_ENTRY(0),
-        GDT_ENTRY(0x9a),
-        GDT_ENTRY(0x92),
-        GDT_ENTRY(0xfa),
-        GDT_ENTRY(0xf2),
+	{0},
+        GDT_ENTRY(0x9a, 0xa),
+        GDT_ENTRY(0x92, 0xc),
+        GDT_ENTRY(0xfa, 0xa),
+	GDT_ENTRY(0xf2, 0xc),
         {0},
 };
 
 gdtr gdtr_val = {
-        sizeof(gdt_val) - 1,
+        sizeof(gdt) - 1,
         &gdt_val,
 };
 
@@ -93,8 +95,8 @@ void gdt_init(void) {
         /*
                 initialize tss
         */
-        tss_val.ist[DOUBLE_FAULT_IST_INDEX] = (uint64_t)double_fault_stack & 0xffffffff;
-        tss_val.ist[DOUBLE_FAULT_IST_INDEX + 1] = ((uint64_t)double_fault_stack >> 32) & 0xffffffff; 
+	tss_val.rsp[0] = (uint64_t)kernel_stack + sizeof(kernel_stack);
+        tss_val.ist[DOUBLE_FAULT_IST_INDEX] = (uint64_t)double_fault_stack + sizeof(double_fault_stack);
 
         gdt_tss_entry tss = GDT_TSS_ENTRY(&tss_val);
         memcpy(&gdt_val.tss, &tss, sizeof(tss)); 

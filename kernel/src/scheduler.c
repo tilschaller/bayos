@@ -4,6 +4,9 @@
 #include <alloc.h>
 #include <string.h>
 #include <lock.h>
+#include <stdio.h>
+#include <memory.h>
+#include <fail.h>
 
 process_t *process_list = NULL;
 process_t *current_process = NULL;
@@ -24,12 +27,11 @@ void sched_init(void) {
 	current_process = p;
 }
 
-spinlock_t add_lock = {0};
-spinlock_t del_lock = {0};
+static spinlock_t add_lock = {0};
+static spinlock_t del_lock = {0};
 
 void add_process(void (*f)(void)) {
 	acquire(&add_lock);
-
 	process_t *p = alloc(sizeof(process_t));
 	p->next = NULL;
 	p->status = READY;
@@ -38,7 +40,7 @@ void add_process(void (*f)(void)) {
 	ctx->iret_rip = (uintptr_t)f;
 	ctx->iret_cs = 0x8;
 	ctx->iret_flags = get_rflags();
-	ctx->iret_rsp = (uintptr_t)((uint8_t*)ctx + 0x4000);
+	ctx->iret_rsp = (uintptr_t)((uint8_t*)ctx + 0x1000);
 	ctx->iret_ss = 0x10;
 	p->context = ctx;
 	process_t *last = process_list;
@@ -49,6 +51,30 @@ void add_process(void (*f)(void)) {
 
 	release(&add_lock);
 }
+
+void add_user_process(uintptr_t f) {
+	acquire(&add_lock);
+	process_t *p = alloc(sizeof(process_t));
+	p->next = NULL;
+	p->status = READY;
+	map_to(allocate_frame(), 0x200000, FLAG_PRESENT | FLAG_WRITEABLE | FLAG_USER);
+	cpu_status_t *ctx = (void*)0x200000;
+	memset(ctx, 0, sizeof(*ctx));
+	ctx->iret_rip = f;
+	ctx->iret_cs = 0x18 | 3;
+	ctx->iret_flags = get_rflags();
+	ctx->iret_rsp = (uintptr_t)((uint8_t*)ctx + 0x1000);
+	ctx->iret_ss = 0x20 | 3;
+	p->context = ctx;
+	process_t *last = process_list;
+	while (last->next != NULL) {
+		last = last->next;
+	}
+	last->next = p;
+
+	release(&add_lock);
+}
+
 void delete_process(process_t *prev, process_t *p) {
 	acquire(&del_lock);
 	free(p->context);

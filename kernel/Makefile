@@ -17,7 +17,8 @@ CFLAGS = \
 	-mno-red-zone \
 	-mcmodel=kernel \
 	-MMD \
-	-mgeneral-regs-only 
+	-mgeneral-regs-only \
+	-O2
 
 ASM_SRCS = \
 	src/exception_handler.asm
@@ -39,7 +40,8 @@ C_SRCS = \
 	src/keyboard.c \
 	src/scheduler.c \
 	src/lock.c \
-	src/cdrom.c
+	src/cdrom.c \
+	src/elf.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
