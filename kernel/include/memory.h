@@ -8,6 +8,7 @@ the heap is placed directly beneath the kernel
 */
 #define HEAP_LENGTH 0x200000
 #define HEAP_ADDRESS (0xffffffff80000000 - HEAP_LENGTH)
+#define HIGHER_HALF 0xffff800000000000
 
 // align to power of two
 #define ALIGN(num, power) \

@@ -2,7 +2,6 @@
 isr_stub_%+%1:
 	mov rdi, %1
 	pop rsi
-	hlt
 	call exception_handler
 	iretq 
 %endmacro
@@ -11,7 +10,6 @@ isr_stub_%+%1:
 isr_stub_%+%1:
 	mov rdi, %1
 	xor rsi, rsi
-	hlt
 	call exception_handler
 	iretq
 %endmacro
@@ -100,6 +98,8 @@ extern apic_error_handler
 extern keyboard_handler
 extern syscall_handler
 
+global _after_timer_handler
+
 global timer_handler_stub
 global spurious_handler_stub
 global apic_error_handler_stub
@@ -110,6 +110,7 @@ timer_handler_stub:
 	pushaq
 	mov rdi, rsp
 	call timer_handler
+_after_timer_handler:
 	mov rsp, rax
 	popaq
 	iretq

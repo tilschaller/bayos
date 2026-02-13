@@ -27,11 +27,10 @@ void sched_init(void) {
 	current_process = p;
 }
 
-static spinlock_t add_lock = {0};
-static spinlock_t del_lock = {0};
+static spinlock_t proc_lock = {0};
 
 void add_process(void (*f)(void)) {
-	acquire(&add_lock);
+	acquire(&proc_lock);
 	process_t *p = alloc(sizeof(process_t));
 	p->next = NULL;
 	p->status = READY;
@@ -46,14 +45,31 @@ void add_process(void (*f)(void)) {
 	process_t *last = process_list;
 	while (last->next != NULL) {
 		last = last->next;
+
 	}
 	last->next = p;
 
-	release(&add_lock);
+	release(&proc_lock);
 }
 
+/*
+ * this function is called from a function in kernel space
+ * or from a syscall (e.g. the current_process is the running process)
+ * so we mark this process as dead, so it gets deleted next time
+ * and return control to the kernel (e.g) the frist entry in the process list
+ * */
+void exit(void) {
+	current_process->status = DEAD;
+
+	schedule(current_process->context);
+
+	asm volatile("push $_after_timer_handler");
+	asm volatile("ret");
+}
+
+
 void add_user_process(uintptr_t f) {
-	acquire(&add_lock);
+	acquire(&proc_lock);
 	process_t *p = alloc(sizeof(process_t));
 	p->next = NULL;
 	p->status = READY;
@@ -72,20 +88,26 @@ void add_user_process(uintptr_t f) {
 	}
 	last->next = p;
 
-	release(&add_lock);
+	release(&proc_lock);
 }
 
 void delete_process(process_t *prev, process_t *p) {
-	acquire(&del_lock);
-	free(p->context);
-	free(p);
+	if (p->context > HIGHER_HALF) {
+		// TODO: free stack of process
+		// free(p->context);
+	} else {
+		/*
+		 *	TODO: free the resources of the user process
+		 * */
+	}
 	prev->next = p->next;
-	free(&del_lock);
+	free(p);
 }
 
 cpu_status_t *schedule(cpu_status_t *context) {
 	current_process->context = context;
-	current_process->status = READY;
+	if (current_process->status != DEAD)
+		current_process->status = READY;
 
 	while (1) {
 		process_t *prev_process = current_process;
@@ -97,6 +119,7 @@ cpu_status_t *schedule(cpu_status_t *context) {
 
 		if (current_process != NULL && current_process->status == DEAD) {
 			delete_process(prev_process, current_process);
+			current_process = prev_process;
 		} else {
 			current_process->status = RUNNING;
 			break;

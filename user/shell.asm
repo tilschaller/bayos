@@ -6,12 +6,13 @@ _start:
 	; do a write syscall
 	mov rbx, message
 	mov rcx, len
-	mov rax, 4
+	mov rax, 1
 
 	int 0x80
-
-_end:
-	jmp _end
+	
+	; exit syscall
+	mov rax, 2
+	int 0x80
 
 section .data
 
