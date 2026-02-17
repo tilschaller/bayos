@@ -79,7 +79,7 @@ static void htab() {
 	}
 }
 
-static void clear() {
+void fb_clear() {
 	uint64_t size = (uint64_t)(stdout.info->bpp / 8) * width() * height();
 	stdout.x_pos = BORDER_PADDING;
 	stdout.y_pos = BORDER_PADDING;
@@ -152,7 +152,7 @@ int32_t putchar(int32_t c) {
 		}
 		uint64_t new_ypos = stdout.y_pos + CHAR_RASTER_HEIGHT + BORDER_PADDING;
 		if (new_ypos >= height()) {
-			clear();
+			fb_clear();
 		}
 		write_char((char)c, 0xffffff);
 	}

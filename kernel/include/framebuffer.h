@@ -50,5 +50,6 @@ typedef struct {
 
 void fb_init(video_mode_info *info);
 int putchar(int c);
+void fb_clear(void);
 
 #endif /* _FRAMEBUFFER_H */
