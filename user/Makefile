@@ -1,14 +1,14 @@
 AS = nasm
 LD = ld
 
-shell: shell.asm
-	nasm -f elf64 -o shell.o shell.asm
-	ld -o shell shell.o
+test: test.asm
+	nasm -f elf64 -o test.o test.asm
+	ld -o test test.o
 
 .PHONY: clean
 clean:
-	rm -rf shell.o shell
+	rm -rf test.o test
 
 .PHONY: install
-install: shell
-	cp shell ../iso
+install: test
+	cp test ../iso

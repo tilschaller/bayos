@@ -70,13 +70,13 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 	uint32_t *root_dir_lba = (uint32_t*)(read_buf + 158);
 	read_cdrom(CDROM_BASE_PORT, false, *root_dir_lba, 1, (uint16_t*)read_buf);
 	// read_buf now contains the entries of the root directory
-	// find the shell file in the iso
+	// find the test_proc file in the iso
 	iso_dir *file = (iso_dir*)read_buf;
 	bool found_file = false;
 	for (;;) {
 		if (!file->length)
 			break;
-		if (!memcmp(file->name, "SHELL.;", 7)) {
+		if (!memcmp(file->name, "TEST.;", 6)) {
 			found_file = true;
 			break;
 		}
@@ -86,31 +86,31 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 		printf("Could not find test file in iso\n");
 		hcf();
 	}
-	elf_header *shell = alloc(file->length * 2048);
-	if (!shell) {
-		printf("Could not allocate space for shell file\n");
+	elf_header *test_proc = alloc(file->length * 2048);
+	if (!test_proc) {
+		printf("Could not allocate space for test_proc file\n");
 		hcf();
 	}
-	if (read_cdrom(CDROM_BASE_PORT, false, file->lba_le, file->length, (uint16_t*)shell)) {
-		printf("Could not read shell file from cdrom\n");
+	if (read_cdrom(CDROM_BASE_PORT, false, file->lba_le, file->length, (uint16_t*)test_proc)) {
+		printf("Could not read test_proc file from cdrom\n");
 		hcf();
 	}
 	free(read_buf);
-	// create the shell process we just use the kernel address space, since we dont really need a seperate one
+	// create the test_proc process we just use the kernel address space, since we dont really need a seperate one
 	// the kernel will be in all address spaces anyway and the lower part of this one is completely free
-	elf_program *programs = (elf_program*)((uint8_t*)shell + shell->e_phoff);
-	for (int i = 0; i < shell->e_phnum; i++) {
+	elf_program *programs = (elf_program*)((uint8_t*)test_proc + test_proc->e_phoff);
+	for (int i = 0; i < test_proc->e_phnum; i++) {
 		if (programs[i].p_type == 1 /* PT_LOAD type */) {
 			int pages = ALIGN(programs[i].p_memsz, 0x1000) / 0x1000;
 			for (int j = 0; j < pages; j++) {
 				map_to(allocate_frame(), programs[i].p_vaddr + j * 0x1000, FLAG_PRESENT | FLAG_WRITEABLE | FLAG_USER);
 			}
-			memcpy((void*)programs[i].p_vaddr, (uint8_t*)shell + programs[i].p_offset, programs[i].p_filesz);
+			memcpy((void*)programs[i].p_vaddr, (uint8_t*)test_proc + programs[i].p_offset, programs[i].p_filesz);
 		}
 	}
 
-	add_user_process(shell->e_entry);
-	free(shell);
+	// add_user_process(test_proc->e_entry);
+	free(test_proc);
 
 	while (1) {
 		asm volatile("hlt");
