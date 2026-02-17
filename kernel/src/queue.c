@@ -33,11 +33,15 @@ int enqueue(queue_t *q, void *value) {
 
 	memcpy(q->elems + q->size * q->rear, value, q->size);
 	q->rear++;
+
+	return 0;
 }
 
 int dequeue(queue_t *q) {
 	if (queue_is_empty(q)) return -1;
 	q->front++;
+
+	return 0;
 }
 
 void *queue_peek(queue_t *q) {
