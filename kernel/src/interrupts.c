@@ -7,6 +7,7 @@
 #include <keyboard.h>
 #include <scheduler.h>
 #include <fail.h>
+#include <queue.h>
 
 typedef struct {
 	uint16_t isr_low;
@@ -39,13 +40,15 @@ void exception_handler(uint64_t int_num, uint64_t error) {
 	hcf();
 }
 
+extern queue_t *q;
+
 void keyboard_handler(cpu_status_t *context) {
 	(void)context;
 
 	uint8_t c = get_key();
 
 	if (c)
-		putchar((int)c);
+		enqueue(q, &c);
 
 	send_eoi();
 }

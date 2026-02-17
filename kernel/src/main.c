@@ -11,17 +11,7 @@
 #include <cdrom.h>
 #include <string.h>
 #include <elf.h>
-
-// test process that prints second process and deletes itself
-void wait(void) {
-	printf("Second process\n");
-
-	// end process
-	asm volatile("mov $2, %rax");
-	asm volatile("int $0x80");
-
-	__builtin_unreachable();
-}
+#include <tty.h>
 
 typedef struct {
 	uint8_t length;
@@ -62,9 +52,9 @@ void _start(uint64_t memory_map, uint64_t video_info) {
 
 	sched_init();
 
-	enable_interrupts();
+	add_process(terminal);
 
-	add_process(wait);
+	enable_interrupts();
 
 	uint8_t *read_buf = alloc(2048);
 	if (!read_buf) {
