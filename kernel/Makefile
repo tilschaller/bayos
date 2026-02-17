@@ -41,7 +41,9 @@ C_SRCS = \
 	src/scheduler.c \
 	src/lock.c \
 	src/cdrom.c \
-	src/elf.c
+	src/elf.c \
+	src/tty.c \
+	src/queue.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
