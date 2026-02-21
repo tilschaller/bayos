@@ -35,7 +35,7 @@ static idtr idtr_val;
 __attribute__((noreturn))
 void exception_handler(uint64_t int_num, uint64_t error) {
 	printf("Exception %llx occured\n", int_num);
-	printf("Error Code: %llx\n", int_num);
+	printf("Error Code: %llx\n", error);
 
 	hcf();
 }

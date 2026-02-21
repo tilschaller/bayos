@@ -4,6 +4,7 @@
 #include <fail.h>
 #include <string.h>
 #include <lock.h>
+#include <limine.h>
 
 void *phys_to_virt(uint64_t phys) {
 	/*
@@ -24,19 +25,7 @@ void *virt_to_phys(uint64_t virt) {
 }
 
 typedef struct {
-	uint64_t addr;
-	uint64_t length;
-	uint32_t type;
-	uint32_t acpi;
-} __attribute__((packed)) memory_map_entry;
-
-typedef struct {
-	uint32_t num_of_entries;
-	memory_map_entry memory_map[];
-} __attribute__((packed)) memory_map;
-
-typedef struct {
-	memory_map *memory_map;
+	struct limine_memmap_response *memory_map;
 	uint64_t region;
 	uint64_t offset;
 } frame_allocator;
@@ -44,9 +33,9 @@ typedef struct {
 frame_allocator f_allocator;
 
 static uint64_t next_region(void) {
-	for (uint32_t i = f_allocator.region + 1; i < f_allocator.memory_map->num_of_entries; i++) {
-		if (f_allocator.memory_map->memory_map[i].type == 1 &&
-		                f_allocator.memory_map->memory_map[i].length >= 0x1000) {
+	for (uint32_t i = f_allocator.region + 1; i < f_allocator.memory_map->entry_count; i++) {
+		if (f_allocator.memory_map->entries[i]->type == LIMINE_MEMMAP_USABLE &&
+		                f_allocator.memory_map->entries[i]->length >= 0x1000) {
 			return i;
 		}
 	}
@@ -62,17 +51,12 @@ returns the physical address of an unused 4KB page
 uintptr_t allocate_frame(void) {
 	acquire(&allocate_frame_lock);
 start:
-	memory_map_entry *r = &f_allocator.memory_map->memory_map[f_allocator.region];
+	struct limine_memmap_entry *r = f_allocator.memory_map->entries[f_allocator.region];
 	f_allocator.offset += 0x1000;
 	if (r->length >= f_allocator.offset) {
-		uint64_t return_addr = r->addr + f_allocator.offset;
-		if (return_addr < 0x400000) {
-			goto start;
-		} else {
-			release(&allocate_frame_lock);
-			return return_addr;
-
-		}
+		uint64_t return_addr = r->base + f_allocator.offset;
+		release(&allocate_frame_lock);
+		return return_addr;
 	} else {
 		uint64_t region = next_region();
 		if (region == 0) {
@@ -84,8 +68,8 @@ start:
 			goto start;
 		}
 	}
-
 	release(&allocate_frame_lock);
+	return 0;
 }
 
 
@@ -134,8 +118,7 @@ void map_to(uintptr_t phys, uintptr_t virt, int flags) {
 	release(&map_to_lock);
 }
 
-void mem_init(void *mm) {
-	memory_map* memory_map = mm;
+void mem_init(struct limine_memmap_response *memory_map) {
 	/*
 	first we retrieve the pml4 from cr3 register
 	*/
@@ -147,13 +130,12 @@ void mem_init(void *mm) {
 	*/
 	mapper.pml4 = phys_to_virt(pml4 & ~0xfff);
 	/*
-	pdpt_low is 0x1000 bytes long and can be used for other things
-	for example to map the kernel heap
 	*/
 	/*
 	unmap low memory
 	*/
 	mapper.pml4[0] = 0;
+
 	/*
 	 * init the frame allocator
 	*/
@@ -163,19 +145,18 @@ void mem_init(void *mm) {
 
 	f_allocator.memory_map = memory_map;
 	f_allocator.offset = 0xfffffffffff;
-	for (uint32_t i = 0; i < memory_map->num_of_entries; i++) {
-		if (memory_map->memory_map[i].type == 1 &&
-		                memory_map->memory_map[i].length >= 0x1000) {
+	for (uint32_t i = 0; i < memory_map->entry_count; i++) {
+		if (memory_map->entries[i]->type == LIMINE_MEMMAP_USABLE &&
+		                memory_map->entries[i]->length >= 0x1000) {
 			if (f_allocator.offset > 0) {
 				f_allocator.region = i;
 				f_allocator.offset = 0;
 			}
-			uint64_t new_start = (memory_map->memory_map[i].addr + 0x1000) & ~(0x1000);
-			memory_map->memory_map[i].length -= new_start - memory_map->memory_map[i].addr;
-			memory_map->memory_map[i].addr = new_start;
+			uint64_t new_start = (memory_map->entries[i]->base + 0x1000) & ~(0x1000);
+			memory_map->entries[i]->length -= new_start - memory_map->entries[i]->base;
+			memory_map->entries[i]->base = new_start;
 		}
 	}
-
 
 	if (f_allocator.offset != 0) hcf();
 

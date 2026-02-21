@@ -21,8 +21,7 @@ static void process_keypress(char c) {
 		}
 		printf("> ");
 		pos = 0;
-	}
-	else {
+	} else {
 		putchar(c);
 		// Write the char into the buffer
 		buf[pos++] = c;

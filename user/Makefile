@@ -11,4 +11,4 @@ clean:
 
 .PHONY: install
 install: test
-	cp test ../iso
+	cp test ../iso/boot/test.elf

@@ -13,104 +13,71 @@
 #include <elf.h>
 #include <tty.h>
 
-typedef struct {
-	uint8_t length;
-	uint8_t ext_attr;
-	uint32_t lba_le;
-	uint32_t lba_be;
-	uint32_t length_le;
-	uint32_t length_be;
-	char date_time[7];
-	uint8_t file_flags;
-	uint8_t dk[2];
-	uint16_t vsn_le;
-	uint16_t vsn_be;
-	uint8_t name_length;
-	char name[];
-} __attribute__((packed)) iso_dir;
+__attribute__((used, section(".limine_requests")))
+static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(4);
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_rsdp_request rsdp_request = {
+	.id = LIMINE_RSDP_REQUEST_ID,
+	.revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_framebuffer_request framebuffer_request = {
+	.id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+	.revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_memmap_request memory_map_request = {
+	.id = LIMINE_MEMMAP_REQUEST_ID,
+	.revision = 0,
+};
+
+__attribute__((used, section(".limine_request")))
+static volatile struct limine_hhdm_request hhdm_request = {
+	.id = LIMINE_HHDM_REQUEST_ID,
+	.revision = 0,
+};
+
+
+
+__attribute__((used, section(".limine_requests_start")))
+static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
+
+__attribute__((used, section(".limine_requests_end")))
+static volatile uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
 
 __attribute__((noreturn))
-void _start(uint64_t memory_map, uint64_t video_info) {
-	fb_init(
-	        phys_to_virt(video_info)
-	);
+void _start(void) {
+	if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision)) hcf();
+	if (framebuffer_request.response == NULL || framebuffer_request.response->framebuffer_count < 1) hcf();
+
+	fb_init(framebuffer_request.response->framebuffers[0]);
 
 	printf("#########################\n");
 	printf("#    Welcome to Bayos   #\n");
 	printf("#########################\n");
 
-	gdt_init();
+	if (memory_map_request.response == NULL) hcf();
+	if (rsdp_request.response == NULL) hcf();
+
 	int_init();
+	gdt_init();
 
 	mem_init(
-	        phys_to_virt(memory_map)
+	        memory_map_request.response
 	);
 
 	heap_init();
 
-	acpi_init();
+	acpi_init(rsdp_request.response->address);
 
 	sched_init();
 
 	add_process(terminal);
 
 	enable_interrupts();
-
-	uint8_t *read_buf = alloc(2048);
-	if (!read_buf) {
-		printf("Error: could not alloc read_buf\n");
-		hcf();
-	}
-	read_cdrom(CDROM_BASE_PORT, false, 16, 1, (uint16_t*)read_buf);
-	if (memcmp(&read_buf[1], "CD001", 5)) {
-		printf("Error: could not find pmi of iso on cdrom\n");
-		hcf();
-	}
-
-	uint32_t *root_dir_lba = (uint32_t*)(read_buf + 158);
-	read_cdrom(CDROM_BASE_PORT, false, *root_dir_lba, 1, (uint16_t*)read_buf);
-	// read_buf now contains the entries of the root directory
-	// find the test_proc file in the iso
-	iso_dir *file = (iso_dir*)read_buf;
-	bool found_file = false;
-	for (;;) {
-		if (!file->length)
-			break;
-		if (!memcmp(file->name, "TEST.;", 6)) {
-			found_file = true;
-			break;
-		}
-		file = (iso_dir*)((uint8_t*)file + file->length);
-	}
-	if (!found_file) {
-		printf("Could not find test file in iso\n");
-		hcf();
-	}
-	elf_header *test_proc = alloc(file->length * 2048);
-	if (!test_proc) {
-		printf("Could not allocate space for test_proc file\n");
-		hcf();
-	}
-	if (read_cdrom(CDROM_BASE_PORT, false, file->lba_le, file->length, (uint16_t*)test_proc)) {
-		printf("Could not read test_proc file from cdrom\n");
-		hcf();
-	}
-	free(read_buf);
-	// create the test_proc process we just use the kernel address space, since we dont really need a seperate one
-	// the kernel will be in all address spaces anyway and the lower part of this one is completely free
-	elf_program *programs = (elf_program*)((uint8_t*)test_proc + test_proc->e_phoff);
-	for (int i = 0; i < test_proc->e_phnum; i++) {
-		if (programs[i].p_type == 1 /* PT_LOAD type */) {
-			int pages = ALIGN(programs[i].p_memsz, 0x1000) / 0x1000;
-			for (int j = 0; j < pages; j++) {
-				map_to(allocate_frame(), programs[i].p_vaddr + j * 0x1000, FLAG_PRESENT | FLAG_WRITEABLE | FLAG_USER);
-			}
-			memcpy((void*)programs[i].p_vaddr, (uint8_t*)test_proc + programs[i].p_offset, programs[i].p_filesz);
-		}
-	}
-
-	// add_user_process(test_proc->e_entry);
-	free(test_proc);
 
 	while (1) {
 		asm volatile("hlt");
