@@ -162,11 +162,11 @@ int32_t putchar(int32_t c) {
 	return 0;
 }
 
-void fb_init(video_mode_info *info) {
+void fb_init(struct limine_framebuffer *info) {
 	release(&lock);
 	stdout.info = info;
 	stdout.x_pos = BORDER_PADDING;
 	stdout.y_pos = BORDER_PADDING;
-	stdout.fb = phys_to_virt((uint64_t)info->phys_address);
+	stdout.fb = info->address;
 	memset(stdout.fb, 0, info->width * info->height / (info->bpp / 8));
 }

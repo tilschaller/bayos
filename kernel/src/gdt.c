@@ -113,5 +113,22 @@ void gdt_init(void) {
 	/*
 	        load tss
 	*/
+	asm volatile(
+		"mov $0x10, %%ax;"
+		"mov %%ax, %%ds;"
+		"mov %%ax, %%es;"
+		"mov %%ax, %%fs;"
+		"mov %%ax, %%gs;"
+		"mov %%ax, %%ss;"
+
+		"pushq $0x8;"
+		"leaq 1f(%%rip), %%rax;"
+		"pushq %%rax;"
+		"retfq;"
+		"1:;"
+
+		: : : "rax", "memory"
+	);
+
 	asm volatile("ltr %0" : : "r"((uint16_t)0x28) : );
 }

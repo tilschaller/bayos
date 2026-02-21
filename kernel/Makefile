@@ -66,4 +66,4 @@ clean:
 
 .PHONY: install
 install: kernel
-	cp kernel ../iso
+	cp kernel ../iso/boot/kernel.elf

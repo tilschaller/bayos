@@ -126,7 +126,7 @@ madt* init_acpi_2(xsdp *xsdp) {
 	return madt;
 }
 
-void acpi_init(void) {
+void acpi_init(void *rsdp_i) {
 	// first disale the legacy pic
 #define PIC_1_CMD_PORT 0x20
 #define PIC_1_DAT_PORT 0x21
@@ -147,21 +147,8 @@ void acpi_init(void) {
 	write_port_u8(PIC_1_DAT_PORT, 0xff);
 	write_port_u8(PIC_2_DAT_PORT, 0xff);
 
-	// find the rsdp in bios area
-	// 0xe0000 - 0xfffff
-	// just hope no gargabe memory has signature
-	xsdp *rsdp = 0;
-	for (uintptr_t i = 0xe0000; i <= 0xfffff; i += 16) {
-		int res = memcmp(phys_to_virt(i), "RSD PTR ", 8);
-		if (res == 0) {
-			rsdp = phys_to_virt(i);
-			break;
-		}
-	}
-	if (rsdp == NULL) {
-		printf("Could not find rsdp\n");
-		hcf();
-	}
+	xsdp *rsdp = rsdp_i;
+
 
 	madt *madt = NULL;
 	if (rsdp->revision == 0) {
@@ -174,6 +161,8 @@ void acpi_init(void) {
 		printf("Could not find lapic\n");
 		hcf();
 	}
+
+	map_to((uintptr_t)virt_to_phys((uintptr_t)lapic), (uintptr_t)lapic, FLAG_PRESENT | FLAG_WRITEABLE);
 
 	// init lapic to well known state
 	lapic[56] = 0xffffffff;
@@ -237,6 +226,7 @@ void acpi_init(void) {
 	for (void *addr = (void*)madt + 0x2c; addr < (void*)madt + madt->header.length;) {
 		madt_entry_io_apic *io_apic = (madt_entry_io_apic*)addr;
 		if (io_apic->type == 1) {
+			map_to(io_apic->addr, (uintptr_t)phys_to_virt(io_apic->addr), FLAG_PRESENT | FLAG_WRITEABLE);
 			volatile uint16_t *ioregsel = phys_to_virt(io_apic->addr);
 			volatile uint32_t *ioregwin = phys_to_virt(io_apic->addr + 16);
 
@@ -263,4 +253,7 @@ void acpi_init(void) {
 next:
 		addr += io_apic->length;
 	}
+	map_to((uintptr_t)virt_to_phys((uintptr_t)lapic), (uintptr_t)lapic, FLAG_PRESENT | FLAG_WRITEABLE);
 }
+
+

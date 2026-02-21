@@ -2,6 +2,7 @@
 #define _MEMORY_H
 
 #include <types/types.h>
+#include <limine.h>
 
 /*
 the heap is placed directly beneath the kernel
@@ -20,7 +21,7 @@ the heap is placed directly beneath the kernel
 
 void *phys_to_virt(uint64_t phys);
 void *virt_to_phys(uint64_t virt);
-void mem_init(void *memory_map);
+void mem_init(struct limine_memmap_response *memory_map);
 uintptr_t allocate_frame(void);
 void map_to(uintptr_t phys, uintptr_t virt, int flags);
 
