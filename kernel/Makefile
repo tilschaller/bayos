@@ -43,7 +43,8 @@ C_SRCS = \
 	src/cdrom.c \
 	src/elf.c \
 	src/tty.c \
-	src/queue.c
+	src/queue.c \
+	src/tar.c
 
 ASM_OBJS = $(patsubst %.asm,%.o,$(ASM_SRCS))
 C_OBJS = $(patsubst %.c,%.o,$(C_SRCS))
