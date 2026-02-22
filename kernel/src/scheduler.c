@@ -30,7 +30,6 @@ void sched_init(void) {
 static spinlock_t proc_lock = {0};
 
 void add_process(void (*f)(void)) {
-	acquire(&proc_lock);
 	process_t *p = alloc(sizeof(process_t));
 	p->next = NULL;
 	p->status = READY;
@@ -47,6 +46,8 @@ void add_process(void (*f)(void)) {
 		last = last->next;
 
 	}
+	acquire(&proc_lock);
+
 	last->next = p;
 
 	release(&proc_lock);
@@ -69,7 +70,6 @@ void exit(void) {
 
 
 void add_user_process(uintptr_t f) {
-	acquire(&proc_lock);
 	process_t *p = alloc(sizeof(process_t));
 	p->next = NULL;
 	p->status = READY;
@@ -81,11 +81,14 @@ void add_user_process(uintptr_t f) {
 	ctx->iret_flags = get_rflags();
 	ctx->iret_rsp = (uintptr_t)((uint8_t*)ctx + 0x1000);
 	ctx->iret_ss = 0x20 | 3;
-	p->context = ctx;
+	p->context = ctx;	
+
 	process_t *last = process_list;
 	while (last->next != NULL) {
 		last = last->next;
 	}
+	acquire(&proc_lock);
+
 	last->next = p;
 
 	release(&proc_lock);

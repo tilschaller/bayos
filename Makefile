@@ -3,7 +3,10 @@ bayos.iso: limine/limine
 	rm -rf iso
 	mkdir -p iso/boot
 	$(MAKE) -C kernel install
+	mkdir -p tar
 	$(MAKE) -C user install
+	(cd iso/boot; tar --transform='s|^tar/||' -cf initrd.tar ../../tar)
+	rm -rf tar
 	mkdir -p iso/boot/limine
 	cp -v limine.conf limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso/boot/limine/
 	mkdir -p iso/EFI/BOOT

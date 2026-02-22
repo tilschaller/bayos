@@ -12,6 +12,7 @@
 #include <string.h>
 #include <elf.h>
 #include <tty.h>
+#include <tar.h>
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(4);
@@ -40,13 +41,19 @@ static volatile struct limine_hhdm_request hhdm_request = {
 	.revision = 0,
 };
 
-
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_module_request module_request = {
+	.id = LIMINE_MODULE_REQUEST_ID,
+	.revision = 0,
+};
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
 
 __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
+
+tar_archive *initrd;
 
 __attribute__((noreturn))
 void _start(void) {
@@ -76,6 +83,18 @@ void _start(void) {
 	sched_init();
 
 	add_process(terminal);
+
+	if (module_request.response == NULL || module_request.response->module_count == 0) {
+		printf("ERROR: no modules loaded, will not be able to lauch processes\n");
+		hcf();
+	}
+
+	initrd = tar_create((uint64_t)module_request.response->modules[0]->address);
+	if (!initrd) {
+		printf("ERROR: failed to create initramfs\n");
+		hcf();
+	}
+	printf("LOG: %llx file(s) in initrd\n", initrd->entry_count);
 
 	enable_interrupts();
 
