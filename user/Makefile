@@ -1,14 +1,14 @@
 AS = nasm
 LD = ld
 
-test: test.asm
-	nasm -f elf64 -o test.o test.asm
-	ld -o test test.o
+init: init.asm
+	nasm -f elf64 -o init.o init.asm
+	ld -o init init.o
 
 .PHONY: clean
 clean:
-	rm -rf test.o test
+	rm -rf init.o init
 
 .PHONY: install
-install: test
-	cp test ../tar/test
+install: init
+	cp init ../tar/init

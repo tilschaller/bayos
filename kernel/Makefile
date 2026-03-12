@@ -42,7 +42,6 @@ C_SRCS = \
 	src/lock.c \
 	src/cdrom.c \
 	src/elf.c \
-	src/tty.c \
 	src/queue.c \
 	src/tar.c
 

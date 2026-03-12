@@ -40,7 +40,15 @@ void exception_handler(uint64_t int_num, uint64_t error) {
 	hcf();
 }
 
-extern queue_t *q;
+static queue_t *kq = NULL;
+
+void init_keyboard_handler(void) {
+	kq = queue_create(0x1000, 1);
+	if (!kq) {
+		printf("Could not create terminal queue\n");
+		hcf();
+	}
+}
 
 void keyboard_handler(cpu_status_t *context) {
 	(void)context;
@@ -48,7 +56,7 @@ void keyboard_handler(cpu_status_t *context) {
 	uint8_t c = get_key();
 
 	if (c)
-		enqueue(q, &c);
+		enqueue(kq, &c);
 
 	send_eoi();
 }
@@ -76,9 +84,23 @@ void spurious_handler(cpu_status_t *context) {
 	(void)context;
 }
 
+extern process_t *current_process;
+
 void syscall_handler(cpu_status_t *context, uint64_t arg_1, uint64_t arg_2, uint64_t arg_3) {
 	(void)context;
-	if (arg_1 == 1) { // write syscall
+	if (arg_1 == 0) { // read syscall
+		char *buf = (char*)arg_2;
+		for (uint64_t i = 0; i < arg_3; i++) {
+			while (1) {
+				if (!queue_is_empty(kq)) {
+					char *c = queue_peek(kq);
+					dequeue(kq);
+					buf[i] = *c;
+					break;
+				}
+			}
+		}
+	} else if (arg_1 == 1) { // write syscall
 		char *msg = (char*)arg_2;
 		for (uint64_t i = 0; i < arg_3; i++) {
 			putchar((int)*msg++);
