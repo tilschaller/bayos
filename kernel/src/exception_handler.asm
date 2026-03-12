@@ -133,6 +133,8 @@ keyboard_handler_stub:
 	popaq
 	iretq
 syscall_handler_stub:
+	; i cannot find any reason not to run them with interrupts enabled
+	sti
 	; input: 3 registers
 	;	rax: contains syscall number
 	;	rbx: first argument

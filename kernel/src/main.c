@@ -11,7 +11,6 @@
 #include <cdrom.h>
 #include <string.h>
 #include <elf.h>
-#include <tty.h>
 #include <tar.h>
 
 __attribute__((used, section(".limine_requests")))
@@ -82,7 +81,7 @@ void _start(void) {
 
 	sched_init();
 
-	add_process(terminal);
+	init_keyboard_handler();
 
 	if (module_request.response == NULL || module_request.response->module_count == 0) {
 		printf("ERROR: no modules loaded, will not be able to lauch processes\n");
@@ -95,6 +94,32 @@ void _start(void) {
 		hcf();
 	}
 	printf("LOG: %llx file(s) in initrd\n", initrd->entry_count);
+
+	// load init process
+	for (int i = 0; i < initrd->entry_count; i++) {
+		if (!memcmp("init\0", initrd->headers[i]->filename, 5)) {
+			// write the init program into the current address space
+			elf_header *proc = (elf_header*)(initrd->headers[i]->file);
+			elf_program *programs = (elf_program*)((uint8_t*)proc + proc->e_phoff);
+			for (int i = 0; i < proc->e_phnum; i++) {
+				if (programs[i].p_type == 1) {
+					int pages = ALIGN(programs[i].p_memsz, 0x1000) / 0x1000;
+					for (int j = 0; j < pages; j++) {
+						map_to(allocate_frame(), programs[i].p_vaddr + j * 0x1000, FLAG_PRESENT | FLAG_WRITEABLE | FLAG_USER);
+					}
+					memcpy((void*)programs[i].p_vaddr, (uint8_t*)proc + programs[i].p_offset, programs[i].p_filesz);
+				}
+			}
+			add_user_process(proc->e_entry);
+
+			goto cont;
+		}
+	}
+	printf("Error: No init process found\n");
+	hcf();
+
+cont:
+	printf("LOG: About to jump to init process\n");
 
 	enable_interrupts();
 

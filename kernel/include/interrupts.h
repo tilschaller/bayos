@@ -5,6 +5,7 @@
 
 void int_init(void);
 void enable_interrupts(void);
+void init_keyboard_handler(void);
 
 typedef struct {
 	uint64_t r15;
