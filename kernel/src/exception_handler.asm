@@ -106,11 +106,17 @@ global apic_error_handler_stub
 global keyboard_handler_stub
 global syscall_handler_stub
 
+section .text
+
+_after_timer_handler:
+	mov dword [_lock], 0
+	jmp __after_timer_handler
+
 timer_handler_stub:
 	pushaq
 	mov rdi, rsp
 	call timer_handler
-_after_timer_handler:
+__after_timer_handler:
 	mov rsp, rax
 	popaq
 	iretq
@@ -132,9 +138,18 @@ keyboard_handler_stub:
 	call keyboard_handler
 	popaq
 	iretq
+_spin_with_pause:
+	pause
+	test dword [_lock], 1
+	jnz _spin_with_pause
+	jmp _acquire_lock
 syscall_handler_stub:
 	; i cannot find any reason not to run them with interrupts enabled
+	; simple spin_lock
 	sti
+_acquire_lock:
+	lock bts dword [_lock], 0
+	jc _spin_with_pause
 	; input: 3 registers
 	;	rax: contains syscall number
 	;	rbx: first argument
@@ -155,4 +170,12 @@ syscall_handler_stub:
 	; mov rcx, rcx rcx is already right
 	call syscall_handler
 	popaq
+	; release spin_lock
+	cli
+	mov dword [_lock], 0
 	iretq
+
+section .data
+align 4
+_lock:
+	dd 0

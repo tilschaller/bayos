@@ -26,7 +26,7 @@ static void ata_io_wait(const uint8_t p) {
 static spinlock_t lock;
 
 // read sectors starting from lba to buffer
-int read_cdrom(uint16_t port, bool slave, uint32_t lba, uint32_t sectors, uint16_t *buffer) {
+int read_cdrom(uint16_t port, int slave, uint32_t lba, uint32_t sectors, uint16_t *buffer) {
 	acquire(&lock);
 	int ret;
 	volatile uint8_t read_cmd[12] = { 0xA8, 0,
