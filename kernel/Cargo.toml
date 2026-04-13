@@ -1,0 +1,24 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bootloader_api = "0.11.12"
+log = "0.4.29"
+conquer-once = { version = "0.3.2", default-features = false }
+spinning_top = "0.3.0"
+x86_64 = "0.15.4"
+lazy_static = { version = "1.5.0", default-features = false, features = ["spin_no_std"] }
+acpi = "6.0.1"
+
+[dependencies.noto-sans-mono-bitmap]
+version = "0.2.0"
+default-features = false
+features = [
+    "regular",
+    "size_16",
+    "unicode-basic-latin",
+    # required for the fallback char '�'
+    "unicode-specials",
+]
