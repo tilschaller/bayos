@@ -12,6 +12,7 @@ pub mod gdt;
 pub mod int;
 pub mod memory;
 pub mod sched;
+pub mod syscall;
 
 use ::acpi::{AcpiTables, platform::AcpiPlatform};
 use alloc::sync::Arc;
@@ -81,6 +82,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     log::info!("scheduler [OK]");
 
     let _frame_allocator = memory::BitmapAllocator::init(frame_allocator);
+    
+    syscall::init();
+    log::info!("syscalls [OK]");
 
     log::info!("starting scheduler!");
 

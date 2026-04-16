@@ -1,12 +1,14 @@
 use alloc::sync::Arc;
+use bitvec::prelude::*;
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 use core::ptr::NonNull;
 use spinning_top::Spinlock;
 use x86_64::{
     PhysAddr, VirtAddr,
-    structures::paging::{FrameAllocator, FrameDeallocator, OffsetPageTable, PageTable, PhysFrame, Size4KiB},
+    structures::paging::{
+        FrameAllocator, FrameDeallocator, OffsetPageTable, PageTable, PhysFrame, Size4KiB,
+    },
 };
-use bitvec::prelude::*;
 
 pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
     unsafe {
@@ -122,7 +124,11 @@ unsafe impl FrameAllocator<Size4KiB> for BitmapAllocator {
 
 impl FrameDeallocator<Size4KiB> for BitmapAllocator {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame) {
-        let index = self.usable_frames().enumerate().find_map(|(i, cmp)| (cmp == frame).then_some(i)).expect("Frame not in memory_map");
+        let index = self
+            .usable_frames()
+            .enumerate()
+            .find_map(|(i, cmp)| (cmp == frame).then_some(i))
+            .expect("Frame not in memory_map");
         self.bitmap.set(index, false);
     }
 }

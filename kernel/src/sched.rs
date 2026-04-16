@@ -69,11 +69,12 @@ pub fn add_process(entry: fn() -> !) {
     });
 }
 
-// dont call this directly
 pub fn delete_process(index: usize) {
-    let mut proc_list = PROCESS_LIST.get().unwrap().lock();
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut proc_list = PROCESS_LIST.get().unwrap().lock();
 
-    proc_list.remove(index);
+        proc_list.remove(index);
+    });
 }
 
 pub fn schedule() {
