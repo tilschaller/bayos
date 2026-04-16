@@ -17,6 +17,10 @@ impl Logger {
 
         Logger(framebuffer)
     }
+
+    pub fn into_inner(&self) -> &Spinlock<FrameBufferWriter> {
+        &self.0
+    }
 }
 
 impl log::Log for Logger {
