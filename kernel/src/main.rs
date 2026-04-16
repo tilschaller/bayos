@@ -60,7 +60,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     log::info!("heap [OK]");
 
     let mapper = Arc::new(Spinlock::new(mapper));
-    let frame_allocator = Arc::new(Spinlock::new(frame_allocator));
 
     let acpi_handler = acpi::AcpiHandlerStruct::new(mapper.clone());
     let acpi_tables = unsafe {
@@ -81,9 +80,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     sched::init();
     log::info!("scheduler [OK]");
 
+    let _frame_allocator = memory::BitmapAllocator::init(frame_allocator);
+
+    // NOTE: scheduler doesnt work
     log::info!("starting scheduler!");
 
     x86_64::instructions::interrupts::enable();
+
 
     loop {
         x86_64::instructions::hlt();
