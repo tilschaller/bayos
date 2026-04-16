@@ -1,8 +1,11 @@
+use crate::framebuffer::LOGGER;
 use crate::gdt;
 use crate::memory;
+use crate::sched;
 use acpi::platform::InterruptModel;
 use alloc::sync::Arc;
 use conquer_once::spin::OnceCell;
+use core::fmt::Write;
 use core::ptr::NonNull;
 use lazy_static::lazy_static;
 use spinning_top::Spinlock;
@@ -324,14 +327,58 @@ extern "x86-interrupt" fn security_handler(stack_frame: InterruptStackFrame, _er
     panic!("EXCEPTION: SECURITY\n{:#?}", stack_frame);
 }
 
-extern "x86-interrupt" fn timer_handler(_stack_frame: InterruptStackFrame) {
+extern "x86-interrupt" fn timer_handler(stack_frame: InterruptStackFrame) {
     send_eoi();
-    // print!(".");
+
+    {
+        let mut proc_list = sched::PROCESS_LIST.get().unwrap().lock();
+
+        let index = sched::CURRENT_PROCESS.get().unwrap().read();
+
+        proc_list[*index].ctx = stack_frame;
+    }
+
+    sched::schedule();
+
+    let proc_list = sched::PROCESS_LIST.get().unwrap().lock();
+
+    let index = sched::CURRENT_PROCESS.get().unwrap().read();
+
+    unsafe {
+        sched::PROCESS_LIST.get().unwrap().force_unlock();
+        sched::CURRENT_PROCESS.get().unwrap().force_unlock_read();
+        proc_list[*index].ctx.iretq()
+    };
 }
 
 extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     send_eoi();
-    log::info!("key presses");
+
+    use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts};
+    use x86_64::instructions::port::Port;
+
+    lazy_static! {
+        static ref KEYBOARD: Spinlock<Keyboard<layouts::De105Key, ScancodeSet1>> =
+            Spinlock::new(Keyboard::new(
+                ScancodeSet1::new(),
+                layouts::De105Key,
+                HandleControl::Ignore
+            ));
+    }
+
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::new(0x60);
+
+    let scancode: u8 = unsafe { port.read() };
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            let mut writer = LOGGER.get().unwrap().into_inner().lock();
+            let _ = match key {
+                DecodedKey::Unicode(character) => write!(writer, "{}", character),
+                DecodedKey::RawKey(key) => write!(writer, "{:?}", key),
+            };
+        }
+    }
 }
 
 extern "x86-interrupt" fn lapic_error_handler(_stack_frame: InterruptStackFrame) {

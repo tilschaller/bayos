@@ -11,6 +11,7 @@ pub mod framebuffer;
 pub mod gdt;
 pub mod int;
 pub mod memory;
+pub mod sched;
 
 use ::acpi::{AcpiTables, platform::AcpiPlatform};
 use alloc::sync::Arc;
@@ -77,7 +78,16 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     int::init_apic(acpi_platform.interrupt_model, mapper.clone());
     log::info!("ACPI [OK]");
 
-    hcf();
+    sched::init();
+    log::info!("scheduler [OK]");
+
+    log::info!("starting scheduler!");
+
+    x86_64::instructions::interrupts::enable();
+
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[panic_handler]
@@ -87,8 +97,8 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 
 fn hcf() -> ! {
-    unsafe { core::arch::asm!("cli") }
+    x86_64::instructions::interrupts::disable();
     loop {
-        unsafe { core::arch::asm!("hlt") }
+        x86_64::instructions::hlt();
     }
 }
