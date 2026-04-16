@@ -4,8 +4,9 @@ use core::ptr::NonNull;
 use spinning_top::Spinlock;
 use x86_64::{
     PhysAddr, VirtAddr,
-    structures::paging::{FrameAllocator, OffsetPageTable, PageTable, PhysFrame, Size4KiB},
+    structures::paging::{FrameAllocator, FrameDeallocator, OffsetPageTable, PageTable, PhysFrame, Size4KiB},
 };
+use bitvec::prelude::*;
 
 pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
     unsafe {
@@ -50,6 +51,10 @@ impl BootInfoFrameAllocator {
         }
     }
 
+    pub fn frames(&self) -> usize {
+        self.usable_frames().count()
+    }
+
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         let regions = self.memory_map.iter();
         let usable_regions = regions.filter(|r| r.kind == MemoryRegionKind::Usable);
@@ -64,5 +69,60 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
         frame
+    }
+}
+
+impl FrameDeallocator<Size4KiB> for BootInfoFrameAllocator {
+    unsafe fn deallocate_frame(&mut self, _frame: PhysFrame) {
+        panic!("Cant deallocate frame using this allocator");
+    }
+}
+
+pub struct BitmapAllocator {
+    memory_map: &'static MemoryRegions,
+    bitmap: BitVec<u8, Lsb0>,
+}
+
+impl BitmapAllocator {
+    pub fn init(old: BootInfoFrameAllocator) -> Self {
+        let bitmap_len = old.frames();
+        log::info!("creating bitmap allocator with {:x} frames", bitmap_len);
+
+        let mut bitvec = BitVec::repeat(false, bitmap_len);
+
+        for i in 0..old.next {
+            bitvec.set(i, true);
+        }
+
+        Self {
+            memory_map: old.memory_map,
+            bitmap: bitvec,
+        }
+    }
+
+    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+        let regions = self.memory_map.iter();
+        let usable_regions = regions.filter(|r| r.kind == MemoryRegionKind::Usable);
+        let addr_ranges = usable_regions.map(|r| r.start..r.end);
+        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
+}
+
+unsafe impl FrameAllocator<Size4KiB> for BitmapAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        let index = match self.bitmap.first_zero() {
+            Some(i) => i,
+            None => return None,
+        };
+        self.bitmap.set(index, true);
+        self.usable_frames().nth(index)
+    }
+}
+
+impl FrameDeallocator<Size4KiB> for BitmapAllocator {
+    unsafe fn deallocate_frame(&mut self, frame: PhysFrame) {
+        let index = self.usable_frames().enumerate().find_map(|(i, cmp)| (cmp == frame).then_some(i)).expect("Frame not in memory_map");
+        self.bitmap.set(index, false);
     }
 }

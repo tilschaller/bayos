@@ -16,10 +16,10 @@ pub enum Status {
 }
 
 pub struct Process {
-    id: u64,
+    _id: u64,
     status: Status,
     pub ctx: InterruptStackFrame,
-    kernel_stack: Option<Box<[u8; 0x4000]>>,
+    _kernel_stack: Option<Box<[u8; 0x4000]>>,
 }
 
 pub static PROCESS_LIST: OnceCell<Spinlock<Vec<Process>>> = OnceCell::uninit();
@@ -30,7 +30,7 @@ pub fn init() {
         Spinlock::new({
             let mut vec = Vec::new();
             vec.push(Process {
-                id: 0,
+                _id: 0,
                 status: Status::RUNNING,
                 ctx: InterruptStackFrame::new(
                     VirtAddr::zero(),
@@ -39,7 +39,7 @@ pub fn init() {
                     VirtAddr::zero(),
                     SegmentSelector(0),
                 ),
-                kernel_stack: None,
+                _kernel_stack: None,
             });
             vec
         })
@@ -55,7 +55,7 @@ pub fn add_process(entry: fn() -> !) {
         let kernel_stack: Box<[u8; 0x4000]> = Box::new([0; 0x4000]);
 
         proc_list.push(Process {
-            id: 1,
+            _id: 1,
             status: Status::READY,
             ctx: InterruptStackFrame::new(
                 VirtAddr::from_ptr(entry as *const fn() -> !),
@@ -64,7 +64,7 @@ pub fn add_process(entry: fn() -> !) {
                 VirtAddr::from_ptr(kernel_stack.as_ptr()),
                 SegmentSelector::new(0x10, PrivilegeLevel::Ring0),
             ),
-            kernel_stack: Some(kernel_stack),
+            _kernel_stack: Some(kernel_stack),
         });
     });
 }
@@ -89,7 +89,7 @@ pub fn schedule() {
 
     loop {
         *index += 1;
-        if *index == proc_list.len() {
+        if *index >= proc_list.len() {
             *index = 0;
         }
         if proc_list[*index].status == Status::READY {
