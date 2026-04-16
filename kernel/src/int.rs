@@ -395,7 +395,6 @@ pub enum InterruptIndex {
     Timer = 32,
     Keyboard = 33,
     LapicError = 34,
-    SystemCall = 0x80,
     Spurious = 0xFF,
 }
 
