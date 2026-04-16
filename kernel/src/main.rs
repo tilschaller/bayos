@@ -82,11 +82,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     let _frame_allocator = memory::BitmapAllocator::init(frame_allocator);
 
-    // NOTE: scheduler doesnt work
     log::info!("starting scheduler!");
 
     x86_64::instructions::interrupts::enable();
-
 
     loop {
         x86_64::instructions::hlt();
@@ -95,6 +93,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
+    x86_64::instructions::interrupts::disable();
     log::error!("{:?}", info);
     hcf();
 }
