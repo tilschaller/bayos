@@ -46,5 +46,4 @@ extern "C" fn syscall_entry() -> ! {
 }
 
 extern "C" fn syscall_handler() {
-    log::info!("in syscall");
 }

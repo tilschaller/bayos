@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     // set by cargo, build scripts should use this directory for output files
@@ -7,15 +8,32 @@ fn main() {
     // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
     let kernel = PathBuf::from(std::env::var_os("CARGO_BIN_FILE_KERNEL_kernel").unwrap());
 
+    let init = PathBuf::from("user/init");
+
+    // build userspace applications
+    let status = Command::new("make")
+        .arg("-C")
+        .arg("user")
+        .status()
+        .expect("failed to run make");
+
+    if !status.success() {
+        panic!("make failed");
+    }
+    println!("cargo:rerun-if-changed=user/Makefile");
+    println!("cargo:rerun-if-changes=user/init.asm");
+
     // create an UEFI disk image (optional)
     let uefi_path = out_dir.join("uefi.img");
     bootloader::UefiBoot::new(&kernel)
+        .set_ramdisk(&init)
         .create_disk_image(&uefi_path)
         .unwrap();
 
     // create a BIOS disk image
     let bios_path = out_dir.join("bios.img");
     bootloader::BiosBoot::new(&kernel)
+        .set_ramdisk(&init)
         .create_disk_image(&bios_path)
         .unwrap();
 
