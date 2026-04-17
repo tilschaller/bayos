@@ -51,7 +51,7 @@ pub fn add_process(entry: fn() -> !) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let mut proc_list = PROCESS_LIST.try_get().unwrap().lock();
 
-        let cpu_flags = proc_list[0].ctx.cpu_flags;
+        let cpu_flags = x86_64::registers::rflags::read();
         let kernel_stack: Box<[u8; 0x4000]> = Box::new([0; 0x4000]);
 
         proc_list.push(Process {
@@ -59,10 +59,10 @@ pub fn add_process(entry: fn() -> !) {
             status: Status::READY,
             ctx: InterruptStackFrame::new(
                 VirtAddr::from_ptr(entry as *const fn() -> !),
-                SegmentSelector::new(0x8, PrivilegeLevel::Ring0),
+                SegmentSelector::new(1, PrivilegeLevel::Ring0),
                 cpu_flags,
-                VirtAddr::from_ptr(kernel_stack.as_ptr()),
-                SegmentSelector::new(0x10, PrivilegeLevel::Ring0),
+                VirtAddr::from_ptr(kernel_stack.as_ptr().wrapping_add(kernel_stack.len())),
+                SegmentSelector::new(2, PrivilegeLevel::Ring0),
             ),
             _kernel_stack: Some(kernel_stack),
         });
