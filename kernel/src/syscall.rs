@@ -19,6 +19,7 @@ pub fn init() {
 use core::arch::naked_asm;
 
 #[unsafe(naked)]
+#[allow(dead_code)]
 extern "C" fn syscall_entry() -> ! {
     naked_asm!(
         "push rax",

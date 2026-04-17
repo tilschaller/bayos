@@ -267,7 +267,7 @@ extern "x86-interrupt" fn general_protection_fault_handler(
     error_code: u64,
 ) {
     panic!(
-        "EXCEPTION: GENERAL PROTECTION FAULT\nERROR_CODE: {}\n{:#?}",
+        "EXCEPTION: GENERAL PROTECTION FAULT\nERROR_CODE: {:x}\n{:#?}",
         error_code, stack_frame
     );
 }

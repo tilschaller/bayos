@@ -89,6 +89,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     log::info!("starting scheduler!");
 
     x86_64::instructions::interrupts::enable();
+    
+    sched::add_process(hcf);
 
     loop {
         x86_64::instructions::hlt();
