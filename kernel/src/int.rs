@@ -1,4 +1,6 @@
 use crate::framebuffer::LOGGER;
+use core::arch::naked_asm;
+use x86_64::VirtAddr;
 use crate::gdt;
 use crate::memory;
 use crate::sched;
@@ -58,7 +60,9 @@ lazy_static! {
         idt.vmm_communication_exception
             .set_handler_fn(vmm_communication_handler);
         idt.security_exception.set_handler_fn(security_handler);
-        idt[InterruptIndex::Timer.as_u8()].set_handler_fn(timer_handler);
+        unsafe {
+        idt[InterruptIndex::Timer.as_u8()].set_handler_addr(VirtAddr::from_ptr(timer_handler as *const extern "C" fn() -> ()));
+        }
         idt[InterruptIndex::Keyboard.as_u8()].set_handler_fn(keyboard_handler);
         idt[InterruptIndex::LapicError.as_u8()].set_handler_fn(lapic_error_handler);
         idt[InterruptIndex::Spurious.as_u8()].set_handler_fn(spurious_interrupt_handler);
@@ -327,28 +331,35 @@ extern "x86-interrupt" fn security_handler(stack_frame: InterruptStackFrame, _er
     panic!("EXCEPTION: SECURITY\n{:#?}", stack_frame);
 }
 
-extern "x86-interrupt" fn timer_handler(stack_frame: InterruptStackFrame) {
-    send_eoi();
+#[allow(dead_code)]
+#[unsafe(naked)]
+extern "C" fn timer_handler() -> () {
+    naked_asm!(
+        "push rax",
+        "push rcx",
+        "push rdx",
+        "push rbx",
+        "push rbp",
+        "push rsi",
+        "push rdi",
 
-    {
-        let mut proc_list = sched::PROCESS_LIST.get().unwrap().lock();
+        "mov rdi, rsp",
 
-        let index = sched::CURRENT_PROCESS.get().unwrap().read();
+        "call {schedule}",
 
-        proc_list[*index].ctx = stack_frame;
-    }
+        "mov rsp, rax",
 
-    sched::schedule();
+        "pop rdi",
+        "pop rsi",
+        "pop rbp",
+        "pop rbx",
+        "pop rdx",
+        "pop rcx",
+        "pop rax",
 
-    let proc_list = sched::PROCESS_LIST.get().unwrap().lock();
-
-    let index = sched::CURRENT_PROCESS.get().unwrap().read();
-
-    unsafe {
-        sched::PROCESS_LIST.get().unwrap().force_unlock();
-        sched::CURRENT_PROCESS.get().unwrap().force_unlock_read();
-        proc_list[*index].ctx.iretq()
-    };
+        "iretq",
+        schedule = sym sched::schedule,
+    );
 }
 
 extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {

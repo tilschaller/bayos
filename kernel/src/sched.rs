@@ -2,11 +2,6 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use conquer_once::spin::OnceCell;
 use spinning_top::{RwSpinlock, Spinlock};
-use x86_64::PrivilegeLevel;
-use x86_64::VirtAddr;
-use x86_64::registers::rflags::RFlags;
-use x86_64::structures::gdt::SegmentSelector;
-use x86_64::structures::idt::InterruptStackFrame;
 
 #[derive(PartialEq)]
 pub enum Status {
@@ -18,7 +13,7 @@ pub enum Status {
 pub struct Process {
     _id: u64,
     status: Status,
-    pub ctx: InterruptStackFrame,
+    rsp: u64,
     _kernel_stack: Option<Box<[u8; 0x4000]>>,
 }
 
@@ -32,13 +27,7 @@ pub fn init() {
             vec.push(Process {
                 _id: 0,
                 status: Status::RUNNING,
-                ctx: InterruptStackFrame::new(
-                    VirtAddr::zero(),
-                    SegmentSelector(0),
-                    RFlags::empty(),
-                    VirtAddr::zero(),
-                    SegmentSelector(0),
-                ),
+                rsp: 0,
                 _kernel_stack: None,
             });
             vec
@@ -49,26 +38,11 @@ pub fn init() {
 
 pub fn add_process(entry: fn() -> !) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        let mut proc_list = PROCESS_LIST.try_get().unwrap().lock();
-
-        let cpu_flags = x86_64::registers::rflags::read();
-        let kernel_stack: Box<[u8; 0x4000]> = Box::new([0; 0x4000]);
-
-        proc_list.push(Process {
-            _id: 1,
-            status: Status::READY,
-            ctx: InterruptStackFrame::new(
-                VirtAddr::from_ptr(entry as *const fn() -> !),
-                SegmentSelector::new(1, PrivilegeLevel::Ring0),
-                cpu_flags,
-                VirtAddr::from_ptr(kernel_stack.as_ptr().wrapping_add(kernel_stack.len())),
-                SegmentSelector::new(2, PrivilegeLevel::Ring0),
-            ),
-            _kernel_stack: Some(kernel_stack),
-        });
+        todo!();
     });
 }
 
+// delete the current process
 pub fn delete_process(index: usize) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let mut proc_list = PROCESS_LIST.get().unwrap().lock();
@@ -77,10 +51,21 @@ pub fn delete_process(index: usize) {
     });
 }
 
-pub fn schedule() {
+pub fn mark_current_as_dead() {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut proc_list = PROCESS_LIST.get().unwrap().lock();
+        let index = CURRENT_PROCESS.get().unwrap().read();
+
+        proc_list[*index].status = Status::DEAD;
+    });
+}
+
+pub extern "C" fn schedule(rsp: u64) -> u64 {
     let mut index = CURRENT_PROCESS.get().unwrap().write();
 
     let mut proc_list = PROCESS_LIST.get().unwrap().lock();
+
+    proc_list[*index].rsp = rsp;
 
     if proc_list[*index].status != Status::DEAD {
         proc_list[*index].status = Status::READY;
@@ -98,4 +83,6 @@ pub fn schedule() {
             break;
         }
     }
+
+    return proc_list[*index].rsp;
 }

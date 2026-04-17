@@ -1,1 +1,3 @@
 target/
+user/init
+user/init.o
