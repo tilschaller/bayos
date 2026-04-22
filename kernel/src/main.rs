@@ -90,7 +90,17 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     syscall::init();
     log::info!("syscalls [OK]");
 
-    hcf();
+    sched::add_process(sched_test);
+
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
+
+fn sched_test() -> ! {
+    log::info!("Hello from sched");
+    loop {
+    }
 }
 
 #[panic_handler]

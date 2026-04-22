@@ -1,4 +1,9 @@
 use alloc::boxed::Box;
+use x86_64::registers::rflags::RFlags;
+use x86_64::VirtAddr;
+use x86_64::structures::gdt::SegmentSelector;
+use x86_64::PrivilegeLevel;
+use x86_64::structures::idt::InterruptStackFrameValue;
 use alloc::vec::Vec;
 use conquer_once::spin::OnceCell;
 use spinning_top::{RwSpinlock, Spinlock};
@@ -38,7 +43,29 @@ pub fn init() {
 
 pub fn add_process(entry: fn() -> !) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        todo!();
+        let mut proc_list = PROCESS_LIST.get().unwrap().lock();
+
+        let cpu_flags = x86_64::registers::rflags::read() | RFlags::INTERRUPT_FLAG;
+        let kernel_stack: Box<[u8; 0x4000]> = Box::new([0; 0x4000]);
+
+        let stack_frame = unsafe {
+            core::mem::transmute::<*const u8, *mut InterruptStackFrameValue>(kernel_stack.as_ptr().wrapping_add(120))
+        };
+
+        unsafe {
+            (*stack_frame).instruction_pointer = VirtAddr::from_ptr(entry as *const fn() -> !);
+            (*stack_frame).code_segment = SegmentSelector::new(1, PrivilegeLevel::Ring0);
+            (*stack_frame).cpu_flags = cpu_flags;
+            (*stack_frame).stack_pointer = VirtAddr::from_ptr(kernel_stack.as_ptr().wrapping_add(kernel_stack.len()));
+            (*stack_frame).stack_segment = SegmentSelector::new(2, PrivilegeLevel::Ring0);
+        }
+            
+        proc_list.push(Process {
+            _id: 1,
+            status: Status::READY,
+            rsp: kernel_stack.as_ptr() as u64,
+            _kernel_stack: Some(kernel_stack),
+        })
     });
 }
 
@@ -62,7 +89,6 @@ pub fn mark_current_as_dead() {
 
 pub extern "C" fn schedule(rsp: u64) -> u64 {
     let mut index = CURRENT_PROCESS.get().unwrap().write();
-
     let mut proc_list = PROCESS_LIST.get().unwrap().lock();
 
     proc_list[*index].rsp = rsp;
