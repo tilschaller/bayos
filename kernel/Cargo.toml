@@ -13,6 +13,7 @@ lazy_static = { version = "1.5.0", default-features = false, features = ["spin_n
 acpi = "6.0.1"
 pc-keyboard = "0.8.0"
 bitvec = { version = "1", default-features = false, features = ["alloc"] }
+crossbeam-queue = { version = "0.3.12", features = ["alloc"], default-features = false }
 
 [dependencies.noto-sans-mono-bitmap]
 version = "0.2.0"

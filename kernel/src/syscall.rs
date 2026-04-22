@@ -1,6 +1,6 @@
-use x86_64::registers::model_specific::{Efer, LStar, Star, SFMask};
-use x86_64::registers::rflags::RFlags;
 use x86_64::VirtAddr;
+use x86_64::registers::model_specific::{Efer, LStar, SFMask, Star};
+use x86_64::registers::rflags::RFlags;
 
 pub fn init() {
     unsafe {
@@ -11,7 +11,7 @@ pub fn init() {
 
     unsafe {
         Star::write_raw(0x18, 0x8);
-    } 
+    }
 
     SFMask::write(RFlags::DIRECTION_FLAG);
 }
@@ -45,5 +45,4 @@ extern "C" fn syscall_entry() -> ! {
     );
 }
 
-extern "C" fn syscall_handler() {
-}
+extern "C" fn syscall_handler() {}

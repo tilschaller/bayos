@@ -1,16 +1,15 @@
-use crate::framebuffer::LOGGER;
-use core::arch::naked_asm;
-use x86_64::VirtAddr;
 use crate::gdt;
 use crate::memory;
 use crate::sched;
+use crate::vfs::pipe;
 use acpi::platform::InterruptModel;
 use alloc::sync::Arc;
 use conquer_once::spin::OnceCell;
-use core::fmt::Write;
+use core::arch::naked_asm;
 use core::ptr::NonNull;
 use lazy_static::lazy_static;
 use spinning_top::Spinlock;
+use x86_64::VirtAddr;
 use x86_64::instructions::port::Port;
 use x86_64::instructions::port::PortReadOnly;
 use x86_64::instructions::port::PortWriteOnly;
@@ -61,7 +60,9 @@ lazy_static! {
             .set_handler_fn(vmm_communication_handler);
         idt.security_exception.set_handler_fn(security_handler);
         unsafe {
-        idt[InterruptIndex::Timer.as_u8()].set_handler_addr(VirtAddr::from_ptr(timer_handler as *const extern "C" fn() -> ()));
+            idt[InterruptIndex::Timer.as_u8()].set_handler_addr(VirtAddr::from_ptr(
+                timer_handler as *const extern "C" fn() -> (),
+            ));
         }
         idt[InterruptIndex::Keyboard.as_u8()].set_handler_fn(keyboard_handler);
         idt[InterruptIndex::LapicError.as_u8()].set_handler_fn(lapic_error_handler);
@@ -69,6 +70,8 @@ lazy_static! {
         idt
     };
 }
+
+pub static INPUT_PIPE: OnceCell<Spinlock<pipe::Pipe>> = OnceCell::uninit();
 
 pub fn init() {
     IDT.load();
@@ -199,6 +202,10 @@ pub fn init_apic(interrupt_model: InterruptModel, mapper: Arc<Spinlock<OffsetPag
             *ioregwin = local_apic_id << 24;
         }
     }
+
+    INPUT_PIPE
+        .try_init_once(|| Spinlock::new(pipe::Pipe::new(128)))
+        .unwrap();
 }
 
 fn send_eoi() {
@@ -402,10 +409,15 @@ extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     let scancode: u8 = unsafe { port.read() };
     if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(key_event) {
-            let mut writer = LOGGER.get().unwrap().into_inner().lock();
             let _ = match key {
-                DecodedKey::Unicode(character) => write!(writer, "{}", character),
-                DecodedKey::RawKey(key) => write!(writer, "{:?}", key),
+                DecodedKey::Unicode(character) => {
+                    if let Some(c) = character.as_ascii() {
+                        let mut pipe = INPUT_PIPE.try_get().unwrap().lock();
+
+                        pipe.write(0, 1, &c.to_u8() as *const u8);
+                    }
+                }
+                DecodedKey::RawKey(_) => (),
             };
         }
     }

@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(abi_x86_interrupt)]
+#![feature(ascii_char)]
 #![feature(ptr_cast_array)] // this is used only once and can be removed
 
 extern crate alloc;
@@ -13,7 +14,9 @@ pub mod int;
 pub mod memory;
 pub mod sched;
 pub mod syscall;
+pub mod vfs;
 
+use crate::vfs::File;
 use ::acpi::{AcpiTables, platform::AcpiPlatform};
 use alloc::sync::Arc;
 use bootloader_api::{BootInfo, BootloaderConfig, config::Mapping, entry_point};
@@ -80,26 +83,24 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     sched::init();
     log::info!("scheduler [OK]");
-    
-    log::info!("starting scheduler!");
 
+    // this actually starts the scheduler
     x86_64::instructions::interrupts::enable();
 
-    let _frame_allocator = memory::BitmapAllocator::init(frame_allocator);
+    // since the scheduler is running
+    // it would be better to use
+    // our own mutex implementation
+    // dependent on the scheduler
+    let _frame_allocator = Arc::new(Spinlock::new(memory::BitmapAllocator::init(
+        frame_allocator,
+    )));
+    log::info!("bitmap allocator [OK]");
 
     syscall::init();
     log::info!("syscalls [OK]");
 
-    sched::add_process(sched_test);
-
     loop {
         x86_64::instructions::hlt();
-    }
-}
-
-fn sched_test() -> ! {
-    log::info!("Hello from sched");
-    loop {
     }
 }
 
