@@ -20,8 +20,9 @@ fn main() {
     if !status.success() {
         panic!("make failed");
     }
+
     println!("cargo:rerun-if-changed=user/Makefile");
-    println!("cargo:rerun-if-changes=user/init.asm");
+    println!("cargo:rerun-if-changed=user/init.asm");
 
     // create an UEFI disk image (optional)
     let uefi_path = out_dir.join("uefi.img");

@@ -32,7 +32,7 @@ impl File for Pipe {
         }
     }
 
-    fn write(&mut self, _offset: usize, size: usize, buffer: *const u8) {
+    fn write(&self, _offset: usize, size: usize, buffer: *const u8) {
         let arr = unsafe { from_raw_parts(buffer, size) };
 
         for i in 0..size {

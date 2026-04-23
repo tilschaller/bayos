@@ -3,8 +3,8 @@ LD = ld
 
 init: init.asm
 	nasm -f elf64 -o init.o init.asm
-	ld -o init init.o
+	ld.lld -o init init.o -m elf_x86_64
 
 .PHONY: clean
 clean:
-	rm -rf init.o init
+	rm -f init.o init

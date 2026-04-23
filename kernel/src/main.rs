@@ -15,8 +15,8 @@ pub mod memory;
 pub mod sched;
 pub mod syscall;
 pub mod vfs;
+pub mod elf;
 
-use crate::vfs::File;
 use ::acpi::{AcpiTables, platform::AcpiPlatform};
 use alloc::sync::Arc;
 use bootloader_api::{BootInfo, BootloaderConfig, config::Mapping, entry_point};
@@ -91,13 +91,18 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // it would be better to use
     // our own mutex implementation
     // dependent on the scheduler
-    let _frame_allocator = Arc::new(Spinlock::new(memory::BitmapAllocator::init(
+    let frame_allocator = Arc::new(Spinlock::new(memory::BitmapAllocator::init(
         frame_allocator,
     )));
     log::info!("bitmap allocator [OK]");
 
     syscall::init();
     log::info!("syscalls [OK]");
+
+    match boot_info.ramdisk_addr.take() {
+        Some(addr) => sched::add_user_process(addr, mapper.clone(), frame_allocator.clone()).expect("Could not load init process"),
+        None       => log::error!("No ramdisk passed"),
+    }
 
     loop {
         x86_64::instructions::hlt();

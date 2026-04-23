@@ -6,7 +6,7 @@ pub trait File {
     // offset: offset into file to write to
     // size: number of bytes to write
     // buffer: buffer to read from
-    fn write(&mut self, offset: usize, size: usize, buffer: *const u8);
+    fn write(&self, offset: usize, size: usize, buffer: *const u8);
 }
 
 pub mod pipe;

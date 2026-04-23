@@ -1,6 +1,7 @@
 use crate::gdt;
 use crate::memory;
 use crate::sched;
+use crate::vfs::File;
 use crate::vfs::pipe;
 use acpi::platform::InterruptModel;
 use alloc::sync::Arc;
@@ -71,7 +72,7 @@ lazy_static! {
     };
 }
 
-pub static INPUT_PIPE: OnceCell<Spinlock<pipe::Pipe>> = OnceCell::uninit();
+pub static INPUT_PIPE: OnceCell<pipe::Pipe> = OnceCell::uninit();
 
 pub fn init() {
     IDT.load();
@@ -204,7 +205,7 @@ pub fn init_apic(interrupt_model: InterruptModel, mapper: Arc<Spinlock<OffsetPag
     }
 
     INPUT_PIPE
-        .try_init_once(|| Spinlock::new(pipe::Pipe::new(128)))
+        .try_init_once(|| pipe::Pipe::new(128))
         .unwrap();
 }
 
@@ -412,7 +413,7 @@ extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
             let _ = match key {
                 DecodedKey::Unicode(character) => {
                     if let Some(c) = character.as_ascii() {
-                        let mut pipe = INPUT_PIPE.try_get().unwrap().lock();
+                        let pipe = INPUT_PIPE.try_get().unwrap();
 
                         pipe.write(0, 1, &c.to_u8() as *const u8);
                     }
