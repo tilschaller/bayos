@@ -28,7 +28,7 @@ fn main() {
     };
 
     let mut cmd = Command::new("qemu-system-x86_64");
-    cmd.arg("-monitor").arg("stdio").arg("-s").arg("-S");
+    cmd.arg("-monitor").arg("stdio");
 
     if uefi {
         let prebuilt =
