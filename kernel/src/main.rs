@@ -8,6 +8,7 @@ extern crate alloc;
 
 pub mod acpi;
 pub mod allocator;
+pub mod elf;
 pub mod framebuffer;
 pub mod gdt;
 pub mod int;
@@ -15,7 +16,6 @@ pub mod memory;
 pub mod sched;
 pub mod syscall;
 pub mod vfs;
-pub mod elf;
 
 use ::acpi::{AcpiTables, platform::AcpiPlatform};
 use alloc::sync::Arc;
@@ -100,8 +100,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     log::info!("syscalls [OK]");
 
     match boot_info.ramdisk_addr.take() {
-        Some(addr) => sched::add_user_process(addr, mapper.clone(), frame_allocator.clone()).expect("Could not load init process"),
-        None       => log::error!("No ramdisk passed"),
+        Some(addr) => sched::add_user_process(addr, mapper.clone(), frame_allocator.clone())
+            .expect("Could not load init process"),
+        None => log::error!("No ramdisk passed"),
     }
 
     loop {

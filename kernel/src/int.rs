@@ -204,9 +204,7 @@ pub fn init_apic(interrupt_model: InterruptModel, mapper: Arc<Spinlock<OffsetPag
         }
     }
 
-    INPUT_PIPE
-        .try_init_once(|| pipe::Pipe::new(128))
-        .unwrap();
+    INPUT_PIPE.try_init_once(|| pipe::Pipe::new(128)).unwrap();
 }
 
 fn send_eoi() {

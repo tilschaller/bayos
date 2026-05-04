@@ -1,12 +1,11 @@
-use x86_64::VirtAddr;
-use crate::vfs::File;
-use crate::int::INPUT_PIPE;
-use core::slice::from_raw_parts;
-use core::fmt::Write;
 use crate::framebuffer::LOGGER;
+use crate::int::INPUT_PIPE;
+use crate::vfs::File;
+use core::fmt::Write;
+use core::slice::from_raw_parts;
 use core::str::from_utf8;
-use x86_64::registers::model_specific::{Efer, LStar, SFMask, Star};
-use x86_64::registers::rflags::RFlags;
+use x86_64::VirtAddr;
+use x86_64::registers::model_specific::{Efer, LStar, Star, FsBase};
 
 pub fn init() {
     unsafe {
@@ -19,7 +18,7 @@ pub fn init() {
         Star::write_raw(0x16, 0x8);
     }
 
-    SFMask::write(RFlags::DIRECTION_FLAG);
+    FsBase::write(VirtAddr::new(0x1fb000));
 }
 
 use core::arch::naked_asm;
@@ -99,9 +98,9 @@ fn read_syscall(fd: u64, buf: *mut u8, count: usize) {
         0 => {
             let pipe = INPUT_PIPE.try_get().unwrap();
             pipe.read(0, count, buf);
-        },
+        }
         _ => (),
-    } 
+    }
 }
 
 fn write_syscall(fd: u64, buf: *const u8, count: usize) {
@@ -112,7 +111,7 @@ fn write_syscall(fd: u64, buf: *const u8, count: usize) {
             if let Ok(buffer) = from_utf8(buf) {
                 let _ = write!(writer, "{}", buffer);
             }
-        },
+        }
         _ => (),
     }
 }

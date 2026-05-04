@@ -1,3 +1,5 @@
 target/
+user/cross/cache
+user/cross/tools
+user/cross/sysroot
 user/init
-user/init.o

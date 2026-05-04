@@ -1,0 +1,17 @@
+[package]
+name = "cross"
+version = "0.1.0"
+edition = "2024"
+autobins = false
+
+[lib]
+name = "cross"
+path = "src/lib.rs"
+
+[build-dependencies]
+ureq = { version = "3", features = ["_tls"] }
+sha2 = "0.10"
+hex = "0.4"
+tar = "0.4"
+xz2 = "0.1"
+flate2 = "1"

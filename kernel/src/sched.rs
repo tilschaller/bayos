@@ -1,24 +1,24 @@
-use alloc::boxed::Box;
-use core::ops::DerefMut;
-use x86_64::structures::paging::Size4KiB;
-use x86_64::structures::paging::FrameAllocator;
-use x86_64::structures::paging::Page;
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::Mapper;
-use x86_64::structures::paging::PageTableFlags;
-use core::slice::from_raw_parts_mut;
 use crate::elf;
-use x86_64::structures::paging::OffsetPageTable;
-use alloc::sync::Arc;
 use crate::memory::BitmapAllocator;
+use alloc::boxed::Box;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use conquer_once::spin::OnceCell;
+use core::ops::DerefMut;
+use core::slice::from_raw_parts_mut;
 use spinning_top::{RwSpinlock, Spinlock};
 use x86_64::PrivilegeLevel;
 use x86_64::VirtAddr;
 use x86_64::registers::rflags::RFlags;
 use x86_64::structures::gdt::SegmentSelector;
 use x86_64::structures::idt::InterruptStackFrameValue;
+use x86_64::structures::paging::FrameAllocator;
+use x86_64::structures::paging::Mapper;
+use x86_64::structures::paging::OffsetPageTable;
+use x86_64::structures::paging::Page;
+use x86_64::structures::paging::PageTableFlags;
+use x86_64::structures::paging::Size4KiB;
+use x86_64::structures::paging::mapper::MapToError;
 
 #[derive(PartialEq)]
 pub enum Status {
@@ -62,7 +62,7 @@ pub fn add_process(entry: fn() -> !) {
 
         let stack_frame = unsafe {
             core::mem::transmute::<*const u8, *mut InterruptStackFrameValue>(
-                kernel_stack.as_ptr().wrapping_add(120)
+                kernel_stack.as_ptr().wrapping_add(120),
             )
         };
 
@@ -87,12 +87,21 @@ pub fn add_process(entry: fn() -> !) {
 // adds a user process to the address space of mapper
 // using frame allocator passed
 // efi is the program
-pub fn add_user_process(efi: u64, mapper: Arc<Spinlock<OffsetPageTable<'static>>>, frame_allocator: Arc<Spinlock<BitmapAllocator>>) -> Result<(), MapToError<Size4KiB>> {
+pub fn add_user_process(
+    efi: u64,
+    mapper: Arc<Spinlock<OffsetPageTable<'static>>>,
+    frame_allocator: Arc<Spinlock<BitmapAllocator>>,
+) -> Result<(), MapToError<Size4KiB>> {
     let mut mapper = mapper.lock();
     let mut frame_allocator = frame_allocator.lock();
 
     let elf_header = efi as *mut elf::Header;
-    let elf_programs = unsafe { from_raw_parts_mut((efi + (*elf_header).e_phoff) as *mut elf::Program, (*elf_header).e_phnum as usize) };
+    let elf_programs = unsafe {
+        from_raw_parts_mut(
+            (efi + (*elf_header).e_phoff) as *mut elf::Program,
+            (*elf_header).e_phnum as usize,
+        )
+    };
 
     for p in elf_programs {
         if p.p_type == 1 {
@@ -108,11 +117,31 @@ pub fn add_user_process(efi: u64, mapper: Arc<Spinlock<OffsetPageTable<'static>>
                 let frame = frame_allocator
                     .allocate_frame()
                     .ok_or(MapToError::FrameAllocationFailed)?;
-                let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
-                unsafe { mapper.map_to(page, frame, flags, frame_allocator.deref_mut())?.flush() };
+                let flags = PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::USER_ACCESSIBLE;
+                unsafe {
+                    mapper
+                        .map_to(page, frame, flags, frame_allocator.deref_mut())?
+                        .flush()
+                };
             }
 
-            unsafe { core::ptr::copy_nonoverlapping((efi + p.p_offset) as *const u8, p.p_vaddr as *mut u8, p.p_memsz as usize) };
+            unsafe {
+                core::ptr::copy_nonoverlapping(
+                    (efi + p.p_offset) as *const u8,
+                    p.p_vaddr as *mut u8,
+                    p.p_memsz as usize,
+                );
+
+if p.p_memsz > p.p_filesz {
+        core::ptr::write_bytes(
+            (p.p_vaddr + p.p_filesz) as *mut u8,
+            0,
+            (p.p_memsz - p.p_filesz) as usize,
+        );
+    }
+            };
         }
     }
 
@@ -123,19 +152,25 @@ pub fn add_user_process(efi: u64, mapper: Arc<Spinlock<OffsetPageTable<'static>>
         let end_page = Page::containing_address(end);
         Page::range_inclusive(start_page, end_page)
     };
-    
+
     for page in page_range {
         let frame = frame_allocator
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
-        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
-        unsafe { mapper.map_to(page, frame, flags, frame_allocator.deref_mut())?.flush() };
+        let flags =
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
+        unsafe {
+            mapper
+                .map_to(page, frame, flags, frame_allocator.deref_mut())?
+                .flush()
+        };
     }
 
     let cpu_flags = x86_64::registers::rflags::read() | RFlags::INTERRUPT_FLAG;
 
     let stack: u64 = 0x200000 - 0x4000;
-    let stack_frame = (stack + 120) as *mut InterruptStackFrameValue;
+    let stack_frame = (stack + 120 + 8) as *mut InterruptStackFrameValue;
+    let tcb = (0x200000 - 0x5000) as *mut u64;
 
     unsafe {
         (*stack_frame).instruction_pointer = VirtAddr::new((*elf_header).e_entry);
@@ -143,6 +178,7 @@ pub fn add_user_process(efi: u64, mapper: Arc<Spinlock<OffsetPageTable<'static>>
         (*stack_frame).cpu_flags = cpu_flags;
         (*stack_frame).stack_pointer = VirtAddr::new(0x200000);
         (*stack_frame).stack_segment = SegmentSelector::new(5, PrivilegeLevel::Ring3);
+        *tcb = 0x200000 - 0x5000;
     }
 
     x86_64::instructions::interrupts::without_interrupts(|| {
@@ -151,11 +187,11 @@ pub fn add_user_process(efi: u64, mapper: Arc<Spinlock<OffsetPageTable<'static>>
         proc_list.push(Process {
             _id: 2,
             status: Status::READY,
-            rsp: stack,
+            rsp: stack + 8,
             _kernel_stack: None,
-        }); 
+        });
     });
-    
+
     Ok(())
 }
 

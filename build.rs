@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 
 fn main() {
     // set by cargo, build scripts should use this directory for output files
@@ -9,20 +8,6 @@ fn main() {
     let kernel = PathBuf::from(std::env::var_os("CARGO_BIN_FILE_KERNEL_kernel").unwrap());
 
     let init = PathBuf::from("user/init");
-
-    // build userspace applications
-    let status = Command::new("make")
-        .arg("-C")
-        .arg("user")
-        .status()
-        .expect("failed to run make");
-
-    if !status.success() {
-        panic!("make failed");
-    }
-
-    println!("cargo:rerun-if-changed=user/Makefile");
-    println!("cargo:rerun-if-changed=user/init.asm");
 
     // create an UEFI disk image (optional)
     let uefi_path = out_dir.join("uefi.img");
