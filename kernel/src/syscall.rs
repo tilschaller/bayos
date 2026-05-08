@@ -1,4 +1,14 @@
 use crate::framebuffer::LOGGER;
+use x86_64::structures::paging::Mapper;
+use crate::sched::PROCESS_LIST;
+use crate::sched::CURRENT_PROCESS;
+use x86_64::structures::paging::Page;
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::PageTableFlags;
+use x86_64::structures::paging::FrameAllocator;
+use alloc::sync::Arc;
+use conquer_once::spin::OnceCell;
+use spinning_top::Spinlock;
 use crate::int::INPUT_PIPE;
 use crate::vfs::File;
 use core::fmt::Write;
@@ -6,8 +16,9 @@ use core::slice::from_raw_parts;
 use core::str::from_utf8;
 use x86_64::VirtAddr;
 use x86_64::registers::model_specific::{Efer, LStar, Star, FsBase};
+use crate::memory;
 
-pub fn init() {
+pub fn init(frame_allocator: Arc<Spinlock<memory::BitmapAllocator>>) {
     unsafe {
         Efer::write_raw(Efer::read_raw() | 1);
     }
@@ -19,6 +30,9 @@ pub fn init() {
     }
 
     FsBase::write(VirtAddr::new(0x1fb000));
+
+
+    FRAME_ALLOCATOR.try_init_once(|| frame_allocator).unwrap();
 }
 
 use core::arch::naked_asm;
@@ -89,8 +103,39 @@ extern "C" fn syscall_handler(
     match index {
         0 => read_syscall(arg0, arg1 as *mut u8, arg2 as usize),
         1 => write_syscall(arg0, arg1 as *const u8, arg2 as usize),
+        2 => anon_allocate_syscall(arg0, arg1 as *mut u64),
         _ => log::info!("unknown syscall {:x}", index),
     }
+}
+
+pub static FRAME_ALLOCATOR: OnceCell<Arc<Spinlock<memory::BitmapAllocator>>> = OnceCell::uninit();
+
+fn anon_allocate_syscall(size: u64, ptr: *mut u64) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let proc_list = PROCESS_LIST.get().unwrap().lock();
+        let cur_proc = CURRENT_PROCESS.get().unwrap().read();
+
+        let page_range_start = proc_list[*cur_proc].pages.unwrap();
+        let mapper = proc_list[*cur_proc].mapper.unwrap().lock();
+
+    let page_range = {
+        let range_start = VirtAddr::new(page_range_start);
+        let range_end = range_start + size - 1u64;
+        let range_start_page = Page::containing_address(range_start);
+        let range_end_page = Page::containing_address(range_end);
+        Page::range_inclusive(range_start_page, range_end_page)
+    };
+
+    let frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+
+    for page in page_range {
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed).unwrap();
+        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+        unsafe { mapper.map_to(page, frame, flags, &mut *frame_allocator).unwrap().flush() };
+    }
+    });
 }
 
 fn read_syscall(fd: u64, buf: *mut u8, count: usize) {

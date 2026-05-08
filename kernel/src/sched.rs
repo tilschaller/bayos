@@ -32,6 +32,8 @@ pub struct Process {
     status: Status,
     rsp: u64,
     _kernel_stack: Option<Box<[u8; 0x4000]>>,
+    pub mapper: Option<Arc<Spinlock<OffsetPageTable<'static>>>>,
+    pub pages: Option<u64>,
 }
 
 pub static PROCESS_LIST: OnceCell<Spinlock<Vec<Process>>> = OnceCell::uninit();
@@ -46,6 +48,8 @@ pub fn init() {
                 status: Status::RUNNING,
                 rsp: 0,
                 _kernel_stack: None,
+                mapper: None,
+                pages: None,
             });
             vec
         })
@@ -80,6 +84,8 @@ pub fn add_process(entry: fn() -> !) {
             status: Status::READY,
             rsp: kernel_stack.as_ptr() as u64,
             _kernel_stack: Some(kernel_stack),
+            mapper: None,
+            pages: None,
         })
     });
 }
@@ -92,7 +98,8 @@ pub fn add_user_process(
     mapper: Arc<Spinlock<OffsetPageTable<'static>>>,
     frame_allocator: Arc<Spinlock<BitmapAllocator>>,
 ) -> Result<(), MapToError<Size4KiB>> {
-    let mut mapper = mapper.lock();
+    let binding = mapper.clone();
+    let mut mapper_unlock = binding.lock();
     let mut frame_allocator = frame_allocator.lock();
 
     let elf_header = efi as *mut elf::Header;
@@ -121,7 +128,7 @@ pub fn add_user_process(
                     | PageTableFlags::WRITABLE
                     | PageTableFlags::USER_ACCESSIBLE;
                 unsafe {
-                    mapper
+                    mapper_unlock
                         .map_to(page, frame, flags, frame_allocator.deref_mut())?
                         .flush()
                 };
@@ -160,7 +167,7 @@ if p.p_memsz > p.p_filesz {
         let flags =
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
         unsafe {
-            mapper
+            mapper_unlock
                 .map_to(page, frame, flags, frame_allocator.deref_mut())?
                 .flush()
         };
@@ -189,6 +196,8 @@ if p.p_memsz > p.p_filesz {
             status: Status::READY,
             rsp: stack + 8,
             _kernel_stack: None,
+            mapper: Some(mapper),
+            pages: Some(0x100_000_000),
         });
     });
 

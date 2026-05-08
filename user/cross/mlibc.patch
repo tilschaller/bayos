@@ -3596,7 +3596,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sysdeps.cpp mlibc-bayos/sysdeps/bayos/sysdeps.cpp
 --- mlibc-6.3.1/sysdeps/bayos/sysdeps.cpp	1970-01-01 01:00:00.000000000 +0100
 +++ mlibc-bayos/sysdeps/bayos/sysdeps.cpp	2026-04-29 18:13:31.364594492 +0200
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,84 @@
 +#include "mlibc/tcb.hpp"
 +#include <abi-bits/errno.h>
 +#include <bits/ensure.h>
@@ -3613,6 +3613,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +
 +#define SYS_READ 0
 +#define SYS_WRITE 1
++#define SYS_ANON_ALLOCATE 2
 +
 +namespace mlibc {
 +
@@ -3676,7 +3677,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +        __builtin_trap();
 +    }
 +
-+    int sys_anon_free(void*, unsigned long) { STUB(); }
++    int sys_anon_free(void*, unsigned long) { return 0; }
 +
-+    int sys_anon_allocate(unsigned long, void**) { STUB(); }
++    int sys_anon_allocate(unsigned long, void**) { auto result = syscall(SYS_ANON_ALLOCATE, size, ptr); return 0; }
 +}

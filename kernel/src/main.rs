@@ -96,7 +96,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     )));
     log::info!("bitmap allocator [OK]");
 
-    syscall::init();
+    syscall::init(frame_allocator.clone());
     log::info!("syscalls [OK]");
 
     match boot_info.ramdisk_addr.take() {
