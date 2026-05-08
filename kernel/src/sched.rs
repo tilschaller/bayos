@@ -141,13 +141,13 @@ pub fn add_user_process(
                     p.p_memsz as usize,
                 );
 
-if p.p_memsz > p.p_filesz {
-        core::ptr::write_bytes(
-            (p.p_vaddr + p.p_filesz) as *mut u8,
-            0,
-            (p.p_memsz - p.p_filesz) as usize,
-        );
-    }
+                if p.p_memsz > p.p_filesz {
+                    core::ptr::write_bytes(
+                        (p.p_vaddr + p.p_filesz) as *mut u8,
+                        0,
+                        (p.p_memsz - p.p_filesz) as usize,
+                    );
+                }
             };
         }
     }

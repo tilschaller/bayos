@@ -1,22 +1,21 @@
 use crate::framebuffer::LOGGER;
-use x86_64::structures::paging::Mapper;
-use crate::sched::PROCESS_LIST;
+use crate::int::INPUT_PIPE;
+use crate::memory;
 use crate::sched::CURRENT_PROCESS;
-use x86_64::structures::paging::Page;
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::PageTableFlags;
-use x86_64::structures::paging::FrameAllocator;
+use crate::sched::PROCESS_LIST;
+use crate::vfs::File;
 use alloc::sync::Arc;
 use conquer_once::spin::OnceCell;
-use spinning_top::Spinlock;
-use crate::int::INPUT_PIPE;
-use crate::vfs::File;
 use core::fmt::Write;
 use core::slice::from_raw_parts;
 use core::str::from_utf8;
+use spinning_top::Spinlock;
 use x86_64::VirtAddr;
-use x86_64::registers::model_specific::{Efer, LStar, Star, FsBase};
-use crate::memory;
+use x86_64::registers::model_specific::{Efer, FsBase, LStar, Star};
+use x86_64::structures::paging::FrameAllocator;
+use x86_64::structures::paging::Mapper;
+use x86_64::structures::paging::Page;
+use x86_64::structures::paging::PageTableFlags;
 
 pub fn init(frame_allocator: Arc<Spinlock<memory::BitmapAllocator>>) {
     unsafe {
@@ -30,7 +29,6 @@ pub fn init(frame_allocator: Arc<Spinlock<memory::BitmapAllocator>>) {
     }
 
     FsBase::write(VirtAddr::new(0x1fb000));
-
 
     FRAME_ALLOCATOR.try_init_once(|| frame_allocator).unwrap();
 }
@@ -112,29 +110,37 @@ pub static FRAME_ALLOCATOR: OnceCell<Arc<Spinlock<memory::BitmapAllocator>>> = O
 
 fn anon_allocate_syscall(size: u64, ptr: *mut u64) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        let proc_list = PROCESS_LIST.get().unwrap().lock();
+        let mut proc_list = PROCESS_LIST.get().unwrap().lock();
         let cur_proc = CURRENT_PROCESS.get().unwrap().read();
 
         let page_range_start = proc_list[*cur_proc].pages.unwrap();
-        let mapper = proc_list[*cur_proc].mapper.unwrap().lock();
 
-    let page_range = {
-        let range_start = VirtAddr::new(page_range_start);
-        let range_end = range_start + size - 1u64;
-        let range_start_page = Page::containing_address(range_start);
-        let range_end_page = Page::containing_address(range_end);
-        Page::range_inclusive(range_start_page, range_end_page)
-    };
+        let page_range = {
+            let range_start = VirtAddr::new(page_range_start);
+            let range_end = range_start + size - 1u64;
+            let range_start_page = Page::containing_address(range_start);
+            let range_end_page = Page::containing_address(range_end);
+            Page::range_inclusive(range_start_page, range_end_page)
+        };
 
-    let frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        {
+            let mut mapper = proc_list[*cur_proc].mapper.as_mut().unwrap().lock();
+            let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
 
-    for page in page_range {
-        let frame = frame_allocator
-            .allocate_frame()
-            .ok_or(MapToError::FrameAllocationFailed).unwrap();
-        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-        unsafe { mapper.map_to(page, frame, flags, &mut *frame_allocator).unwrap().flush() };
-    }
+            for page in page_range {
+                let frame = frame_allocator.allocate_frame().unwrap();
+                let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
+                unsafe {
+                    mapper
+                        .map_to(page, frame, flags, &mut *frame_allocator)
+                        .unwrap()
+                        .flush()
+                };
+            }
+        }
+
+        unsafe { *ptr = page_range_start }
+        proc_list[*cur_proc].pages = Some(page_range_start + page_range.size());
     });
 }
 
