@@ -3627,7 +3627,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +        *written = result;
 +        return 0;
 +    }
-+    
++    int sys_isatty(int) { return 0; }
 +    int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
 +        auto result = syscall(SYS_READ, fd, buf, count);
 +    
@@ -3656,7 +3656,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +        STUB();
 +    }
 +
-+    int sys_seek(int, long, int, long*) { STUB(); }
++    int sys_seek(int, long, int, long*) { return ESPIPE; }
 +
 +    int sys_futex_wait(int*, int, timespec const*) { STUB(); }
 +

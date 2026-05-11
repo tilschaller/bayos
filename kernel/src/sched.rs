@@ -177,7 +177,7 @@ pub fn add_user_process(
 
     let stack: u64 = 0x200000 - 0x4000;
     let stack_frame = (stack + 120 + 8) as *mut InterruptStackFrameValue;
-    let tcb = (0x200000 - 0x5000) as *mut u64;
+    let tcb = (0x200000 - 0x4000) as *mut u64;
 
     unsafe {
         (*stack_frame).instruction_pointer = VirtAddr::new((*elf_header).e_entry);
@@ -185,7 +185,7 @@ pub fn add_user_process(
         (*stack_frame).cpu_flags = cpu_flags;
         (*stack_frame).stack_pointer = VirtAddr::new(0x200000);
         (*stack_frame).stack_segment = SegmentSelector::new(5, PrivilegeLevel::Ring3);
-        *tcb = 0x200000 - 0x5000;
+        *tcb = 0x200000 - 0x4000;
     }
 
     x86_64::instructions::interrupts::without_interrupts(|| {

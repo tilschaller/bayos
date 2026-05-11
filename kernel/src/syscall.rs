@@ -28,7 +28,7 @@ pub fn init(frame_allocator: Arc<Spinlock<memory::BitmapAllocator>>) {
         Star::write_raw(0x16, 0x8);
     }
 
-    FsBase::write(VirtAddr::new(0x1fb000));
+    FsBase::write(VirtAddr::new(0x1fc000));
 
     FRAME_ALLOCATOR.try_init_once(|| frame_allocator).unwrap();
 }
