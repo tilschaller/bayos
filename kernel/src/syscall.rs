@@ -1,4 +1,5 @@
 use crate::framebuffer::LOGGER;
+use crate::gdt::GDT;
 use crate::int::INPUT_PIPE;
 use crate::memory;
 use crate::sched::CURRENT_PROCESS;
@@ -24,9 +25,13 @@ pub fn init(frame_allocator: Arc<Spinlock<memory::BitmapAllocator>>) {
 
     LStar::write(VirtAddr::from_ptr(syscall_entry as *const fn()));
 
-    unsafe {
-        Star::write_raw(0x16, 0x8);
-    }
+    Star::write(
+        GDT.1.user_code_selector,
+        GDT.1.user_data_selector,
+        GDT.1.code_selector,
+        GDT.1.data_selector,
+    )
+    .unwrap();
 
     FsBase::write(VirtAddr::new(0x1fc000));
 
@@ -129,7 +134,9 @@ fn anon_allocate_syscall(size: u64, ptr: *mut u64) {
 
             for page in page_range {
                 let frame = frame_allocator.allocate_frame().unwrap();
-                let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::USER_ACCESSIBLE;
+                let flags = PageTableFlags::PRESENT
+                    | PageTableFlags::WRITABLE
+                    | PageTableFlags::USER_ACCESSIBLE;
                 unsafe {
                     mapper
                         .map_to(page, frame, flags, &mut *frame_allocator)
