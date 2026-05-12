@@ -3624,7 +3624,7 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +            return -result;
 +        }
 +    
-+        *written = result;
++        *written = count;
 +        return 0;
 +    }
 +    int sys_isatty(int) { return 0; }
