@@ -3679,5 +3679,5 @@ diff --color -ru --new-file '--exclude=subprojects' mlibc-6.3.1/sysdeps/bayos/sy
 +
 +    int sys_anon_free(void*, unsigned long) { return 0; }
 +
-+    int sys_anon_allocate(unsigned long, void**) { auto result = syscall(SYS_ANON_ALLOCATE, size, ptr); return 0; }
++    int sys_anon_allocate(unsigned long size, void** ptr) { auto result = syscall(SYS_ANON_ALLOCATE, size, ptr); return 0; }
 +}
